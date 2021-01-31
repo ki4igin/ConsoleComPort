@@ -20,7 +20,7 @@ namespace ConsoleComPort
             set
             {
                 _cmdStr = value;
-                var emptyStr = $"\r{ new string(' ', Console.WindowWidth) }\r";
+                var emptyStr = $"\r{ new string(' ', Console.WindowWidth - 1) }\r";
                 lock (_lockWrtie)
                 {
                     Console.CursorVisible = false;
@@ -57,7 +57,7 @@ namespace ConsoleComPort
         public static void Write(string str = "")
         {
             if (Console.CursorTop < 2) Console.CursorTop = 2;
-            var emptyStr = $"\r{ new string(' ', Console.WindowWidth) }\r";
+            var emptyStr = $"\r{ new string(' ', Console.WindowWidth - 1) }\r";
             lock (_lockWrtie)
             {
                 Console.CursorVisible = false;
