@@ -20,6 +20,7 @@ namespace ConsoleComPort
             {
                 ["start"] = comPort.ReceiveStart,
                 ["stop"] = comPort.ReceiveStop,
+                ["reboot"] = comPort.ReceiveReboot,
                 ["clear"] = Console.Clear,
                 ["settings"] = comPort.SetAllSettings,
                 ["quit"] = null,
