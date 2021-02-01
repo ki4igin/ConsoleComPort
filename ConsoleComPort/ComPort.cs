@@ -155,38 +155,51 @@ namespace ConsoleComPort
 
         public void Transmit(string message)
         {
-            Format formatTx = Format.ASCII;
-            if (message.Length >= 2 && message[0] == '0' && message[1] == 'x')
+            if (_statusRX == false)
             {
-                formatTx = Format.HEX;
-                message = message[2..];
+                return;
             }
-            switch (formatTx)
+
+            string sendStr = default;
+            string consoleStr = default;
+            if (message.Length >= 2 && message[..2] == "0x")
             {
-                case Format.HEX:
-                    string[] commandSplit = message.Split(' ');
-                    List<byte> list = new List<byte>();
-                    foreach (string hex in commandSplit)
+                message = message
+                    .Replace("_", "")
+                    .Replace("0x", "")
+                    .Replace(" ", "")
+                    .Replace("-", "")
+                    .ToUpper();
+                List<char> listByte = new();
+                List<string> listStrs = new();
+                for (int i = 0; i < message.Length - 1; i += 2)
+                {
+                    var strByte = message[i..(i + 2)];
+                    if (byte.TryParse(strByte, NumberStyles.HexNumber, null, out byte value))
                     {
-                        if ((hex.Length <= 2)
-                            && int.TryParse(hex, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out int result))
-                        {
-                            list.Add((byte)result);
-                        }
-                        else
-                        {
-                            formatTx = Format.ASCII;
-                            break;
-                        }
+                        listByte.Add((char)value);
+                        listStrs.Add(strByte);
                     }
-                    _serialPort.Write(list.ToArray(), 0, list.Count);
-                    break;
-                case Format.ASCII:
-                    _serialPort.Write(message);
-                    break;
-                default:
-                    break;
+                    sendStr = new string(listByte.ToArray());
+                    consoleStr = string.Join(" ", listStrs.Select(str => $"0x{str}"));
+                }
             }
+            else
+            {
+                sendStr = message;
+                consoleStr = message;
+            }
+
+            if (sendStr.Length > 0)
+            {
+                _serialPort.Write(sendStr);
+                MyConsole.WriteLineYellow(consoleStr);
+            }
+            else
+            {
+                MyConsole.WriteLineRed("Format send data not correct");
+            }
+
         }
 
         public void ReceiveStart()
@@ -200,17 +213,15 @@ namespace ConsoleComPort
                 _serialPort.Open();
             }
             _serialPort.ReadTimeout = 1000;
-            MyConsole.WriteLineGreen($"Start Monitor {_serialPort.PortName}");
+            MyConsole.WriteLineGreen($"\r\nStart Monitor {_serialPort.PortName}");
             _statusRX = true;
             Task.Run(() => ReceiveProcess());
         }
-
         public void ReceiveStop()
         {
             _statusRX = false;
             _serialPort.ReadTimeout = 100;
         }
-
         private void ReceiveProcess()
         {
             int cnt = 0;
@@ -246,7 +257,7 @@ namespace ConsoleComPort
                 }
             }
             _serialPort.Close();
-            MyConsole.WriteLineRed($"Stop Monitor {_serialPort.PortName}");
+            MyConsole.WriteLineRed($"\r\nStop Monitor {_serialPort.PortName}");
         }
 
     }
