@@ -63,6 +63,12 @@ namespace ConsoleComPort
 
         public void SetAllSettings()
         {
+            if (_statusRX)
+            {
+                MyConsole.WriteNewLineRed("First stop monitor");
+                return;
+            }
+
             Settings settings = _settings;
             settings.PortName.Value = SetPortName(settings.PortName.Value);
             settings.BaudRate.Value = SetBaudRate(settings.BaudRate.Value);

@@ -67,7 +67,7 @@ namespace ConsoleComPort
                 Console.SetCursorPosition(_posCursorData, Console.CursorTop - 2);
                 Console.Write(str);
                 _posCursorData = Console.CursorLeft;
-                Console.SetCursorPosition(0, Console.CursorTop + 2);
+                Console.Write("\r\n\n"); // SetCursorPosition(0, Console.CursorTop + 2);               
                 Console.Write(CmdStr);
                 Console.CursorLeft = _posCursorCmd;
                 Console.CursorVisible = true;
