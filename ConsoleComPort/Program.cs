@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO.Ports;
 using System.Linq;
 
 namespace ConsoleComPort
@@ -9,6 +8,7 @@ namespace ConsoleComPort
     {
         static void Main()
         {
+            Console.WriteLine();
             ComPort comPort = new ComPort();
 
             /// Сохрание настроек после выхода из программы

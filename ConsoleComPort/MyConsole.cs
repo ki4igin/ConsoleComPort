@@ -37,14 +37,24 @@ namespace ConsoleComPort
             _cmdKeyWords = keyWords;
         }
 
-        public static void WriteNewLineGreen(string str) => WriteLineGreen($"\r\n{str}");
-        public static void WriteNewLineRed(string str) => WriteLineRed($"\r\n{str}");
-        public static void WriteNewLineYellow(string str) => WriteLineYellow($"\r\n{str}");
-        public static void WriteNewLine(string str, ConsoleColor consoleColor) => WriteLine($"\r\n{str}", consoleColor);
-        public static void WriteNewLine(string str) => WriteLine($"\r\n{str}");
+        public static void WriteNewLineGreen(string str) => WriteNewLine(str, ConsoleColor.Green);
+        public static void WriteNewLineRed(string str) => WriteNewLine(str, ConsoleColor.Red);
+        public static void WriteNewLineYellow(string str) => WriteNewLine(str, ConsoleColor.DarkYellow);
         public static void WriteLineGreen(string str) => WriteLine(str, ConsoleColor.Green);
         public static void WriteLineRed(string str) => WriteLine(str, ConsoleColor.Red);
         public static void WriteLineYellow(string str) => WriteLine(str, ConsoleColor.DarkYellow);
+
+        public static void WriteNewLine(string str, ConsoleColor consoleColor)
+        {
+            Console.ForegroundColor = consoleColor;
+            WriteNewLine(str);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+        public static void WriteNewLine(string str = "")
+        {
+            var tempStr = _posCursorData == 0 ? $"{str}\r\n" : $"\r\n{str}\r\n";
+            Write(tempStr);
+        }
         public static void WriteLine(string str, ConsoleColor consoleColor)
         {
             Console.ForegroundColor = consoleColor;
@@ -193,7 +203,6 @@ namespace ConsoleComPort
             return resultStr;
         }
 
-
         private static void ConsoleWriteLineGreen(string str) => ConsoleWriteLine(str, ConsoleColor.Green);
         private static void ConsoleWriteLineRed(string str) => ConsoleWriteLine(str, ConsoleColor.Red);
         private static void ConsoleWriteLine(string str, ConsoleColor consoleColor)
@@ -203,9 +212,9 @@ namespace ConsoleComPort
             Console.ForegroundColor = ConsoleColor.White;
         }
 
-
         const int ALLIGMEND = 6;
         const int START_LIST_NUMBER = 1;
+
         public static string SelectFromList(
             string[] settings,
             string nameSetting = "Parametrs",
@@ -286,7 +295,6 @@ namespace ConsoleComPort
             Console.Write($"[{strPosNew + START_LIST_NUMBER}] {str2}\r");
             Console.BackgroundColor = ConsoleColor.Black;
         }
-
 
         public static int ReadNumber(
             string nameSetting = "Parametrs",
