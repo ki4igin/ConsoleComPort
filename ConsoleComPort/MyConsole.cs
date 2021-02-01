@@ -175,7 +175,8 @@ namespace ConsoleComPort
                     default:
                         if (keyInfo.Key >= ConsoleKey.D0 && keyInfo.Key <= ConsoleKey.Z ||
                             keyInfo.Key >= ConsoleKey.NumPad0 && keyInfo.Key <= ConsoleKey.Divide ||
-                            keyInfo.Key >= ConsoleKey.Oem1 && keyInfo.Key <= ConsoleKey.Oem102)
+                            keyInfo.Key >= ConsoleKey.Oem1 && keyInfo.Key <= ConsoleKey.Oem102 ||
+                            keyInfo.Key == ConsoleKey.Spacebar)
                         {
                             sb.Insert(posCursorCmd, keyInfo.KeyChar);
                             posCursorCmd++;
