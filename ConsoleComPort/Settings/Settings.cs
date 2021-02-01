@@ -75,6 +75,7 @@ namespace ConsoleComPort
                         .GetField(nameof(Settings.Setting<string>.Value))
                         .SetValue(setting, value.GetValue(globalSettings));
                 }
+                fields.SetValue(settings, setting);
             }
         }
 
