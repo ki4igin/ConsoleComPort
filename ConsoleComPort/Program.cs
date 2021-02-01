@@ -9,7 +9,6 @@ namespace ConsoleComPort
     {
         static void Main()
         {
-            Console.WriteLine();
             ComPort comPort = new ComPort();
 
             /// Сохрание настроек после выхода из программы

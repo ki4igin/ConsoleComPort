@@ -16,14 +16,12 @@ namespace ConsoleComPort
             Two = 2,
             OnePointFive = 3
         }
-
         public enum Format
         {
-            BIN,
+            BIN = 0,
             HEX,
             ASCII
         }
-
         readonly string[] _baudRatesList =
         {
             "4800",
@@ -59,10 +57,9 @@ namespace ConsoleComPort
                 Handshake = (Handshake)Enum.Parse(typeof(Handshake), _settings.Handshake.Value),
                 ReadTimeout = 1000
             };
-
+            _formatRx = (Format)Enum.Parse(typeof(Format), _settings.Format.Value);
             Settings.Display(_settings);
         }
-
 
         public void SetAllSettings()
         {
@@ -153,7 +150,6 @@ namespace ConsoleComPort
             Settings.Display(_settings);
         }
 
-
         public void Transmit(string message)
         {
             if (_statusRX == false)
@@ -194,11 +190,11 @@ namespace ConsoleComPort
             if (sendStr.Length > 0)
             {
                 _serialPort.Write(sendStr);
-                MyConsole.WriteLineYellow($"\r\n{consoleStr}");
+                MyConsole.WriteNewLineYellow(consoleStr);
             }
             else
             {
-                MyConsole.WriteLineRed("Format send data not correct");
+                MyConsole.WriteNewLineRed("Format send data not correct");
             }
 
         }
@@ -213,7 +209,7 @@ namespace ConsoleComPort
                 _serialPort.Open();
             }
             _serialPort.ReadTimeout = 1000;
-            MyConsole.WriteLineGreen($"\r\nStart Monitor {_serialPort.PortName}");
+            MyConsole.WriteNewLineGreen($"Start Monitor {_serialPort.PortName}");
             _statusRX = true;
             Task.Run(() => ReceiveProcess());
         }
@@ -267,7 +263,7 @@ namespace ConsoleComPort
                 }
             }
             _serialPort.Close();
-            MyConsole.WriteLineRed($"\r\nStop Monitor {_serialPort.PortName}");
+            MyConsole.WriteNewLineRed($"Stop Monitor {_serialPort.PortName}");
         }
 
     }
