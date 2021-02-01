@@ -84,8 +84,9 @@ namespace ConsoleComPort
         {
             MyConsole.WriteNewLineGreen("Введите имя файла для сохранения настроек");
             var fileName = MyConsole.ReadLine() + ".json";
-            var filePath = $"./settings/{fileName}";
-            Directory.CreateDirectory("settings");
+            var dirPath = AppContext.BaseDirectory + "/settings";
+            var filePath = $"{dirPath}/{fileName}";
+            Directory.CreateDirectory(dirPath);
             var jsonOptions = new JsonSerializerOptions
             {
                 IncludeFields = true,
@@ -99,8 +100,8 @@ namespace ConsoleComPort
 
         public static T ReadFromFile<T>()
         {
-            var path = "./settings";
-            DirectoryInfo dir = new DirectoryInfo(path);
+            var dirPath = AppContext.BaseDirectory + "/settings";
+            DirectoryInfo dir = new DirectoryInfo(dirPath);
             List<string> fileNames = new List<string>();
             foreach (var file in dir.GetFiles("*.json"))
             {
@@ -112,7 +113,7 @@ namespace ConsoleComPort
             }
 
             var fileName = MyConsole.SelectFromList(fileNames.ToArray(), "Файлы");
-            var filePath = $"{path}/{fileName}.json";
+            var filePath = $"{dirPath}/{fileName}.json";
             var jsonOptions = new JsonSerializerOptions
             {
                 IncludeFields = true,
