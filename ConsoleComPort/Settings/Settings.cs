@@ -142,8 +142,7 @@ namespace ConsoleComPort
                     .GetValue(setting)
                     .ToString();
                 MyConsole.WriteLine($"{description,-20} {value}");
-            }
-            MyConsole.WriteLine();
+            }          
         }
 
         private static void CopyAllFiledsAndProperty<T>(T source, T target)
