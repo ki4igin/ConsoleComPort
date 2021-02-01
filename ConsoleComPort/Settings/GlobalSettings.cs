@@ -1,5 +1,4 @@
 ﻿using System.Configuration;
-using System.IO.Ports;
 
 sealed class GlobalSettings : ApplicationSettingsBase
 {
