@@ -37,18 +37,20 @@ namespace ConsoleComPort
             _cmdKeyWords = keyWords;
         }
 
-
+        public static void WriteNewLineGreen(string str) => WriteLineGreen($"\r\n{str}");
+        public static void WriteNewLineRed(string str) => WriteLineRed($"\r\n{str}");
+        public static void WriteNewLineYellow(string str) => WriteLineYellow($"\r\n{str}");
+        public static void WriteNewLine(string str, ConsoleColor consoleColor) => WriteLine($"\r\n{str}", consoleColor);
+        public static void WriteNewLine(string str) => WriteLine($"\r\n{str}");
         public static void WriteLineGreen(string str) => WriteLine(str, ConsoleColor.Green);
         public static void WriteLineRed(string str) => WriteLine(str, ConsoleColor.Red);
         public static void WriteLineYellow(string str) => WriteLine(str, ConsoleColor.DarkYellow);
-
-        private static void WriteLine(string str, ConsoleColor consoleColor)
+        public static void WriteLine(string str, ConsoleColor consoleColor)
         {
             Console.ForegroundColor = consoleColor;
             WriteLine(str);
             Console.ForegroundColor = ConsoleColor.White;
         }
-
         public static void WriteLine(string str = "")
         {
             var tempStr = str + "\r\n";

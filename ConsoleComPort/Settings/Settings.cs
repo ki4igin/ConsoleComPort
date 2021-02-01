@@ -82,7 +82,7 @@ namespace ConsoleComPort
 
         public static void SaveToFile<T>(T settings)
         {
-            MyConsole.WriteLineGreen("Введите имя файла для сохранения настроек");
+            MyConsole.WriteNewLineGreen("Введите имя файла для сохранения настроек");
             var fileName = MyConsole.ReadLine() + ".json";
             var filePath = $"./settings/{fileName}";
             Directory.CreateDirectory("settings");
@@ -94,7 +94,7 @@ namespace ConsoleComPort
             };
             string jsonString = JsonSerializer.Serialize(settings, jsonOptions);
             File.WriteAllText(filePath, jsonString);
-            MyConsole.WriteLineGreen($"Настройки сохранены в файл {fileName}");
+            MyConsole.WriteNewLineGreen($"Настройки сохранены в файл {fileName}");
         }
 
         public static T ReadFromFile<T>()
@@ -108,7 +108,7 @@ namespace ConsoleComPort
             }
             if (fileNames.Count == 0)
             {
-                MyConsole.WriteLineRed("Файлы настроек не найдены!");
+                MyConsole.WriteNewLineRed("Файлы настроек не найдены!");
             }
 
             var fileName = MyConsole.SelectFromList(fileNames.ToArray(), "Файлы");
@@ -126,7 +126,7 @@ namespace ConsoleComPort
 
         public static void Display<T>(T settings)
         {
-            MyConsole.WriteLineGreen($"Current Settings");
+            MyConsole.WriteNewLineGreen($"Current Settings");
             foreach (var fields in settings.GetType().GetFields())
             {
                 var setting = fields.GetValue(settings);
