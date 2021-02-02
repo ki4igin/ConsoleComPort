@@ -212,7 +212,15 @@ namespace ConsoleComPort
             }
             if (_serialPort.IsOpen == false)
             {
-                _serialPort.Open();
+                try
+                {
+                    _serialPort.Open();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    MyConsole.WriteNewLineRed($"Port is Busy");
+                    return;
+                }
             }
             _serialPort.ReadTimeout = 1000;
             MyConsole.WriteNewLineGreen($"Start Monitor {_serialPort.PortName}");
