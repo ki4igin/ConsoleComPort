@@ -241,44 +241,30 @@ namespace ConsoleComPort
                 strPos = defaultSettingNum;
                 Console.CursorTop = cursorTopInit + strPos;
 
-                HighlightStr(settings, strPos, strPos, enableAlligmend);
-
-                while (true)
+                ConsoleKey key;
+                int oldStrPos = strPos;
+                do
                 {
-                    ConsoleKey key = Console.ReadKey(true).Key;
-                    if (key == ConsoleKey.Enter)
+                    HighlightStr(settings, oldStrPos, strPos, enableAlligmend);
+                    oldStrPos = strPos;
+                    key = Console.ReadKey(true).Key;
+                    strPos = key switch
                     {
-                        break;
-                    }
-                    int strPosNew = strPos;
-                    switch (key)
-                    {
-                        case ConsoleKey.UpArrow:
-                            strPosNew = (strPos == 0) ? (settings.Length - 1) : (strPos - 1);
-                            break;
-                        case ConsoleKey.DownArrow:
-                            strPosNew = (strPos == settings.Length - 1) ? (0) : (strPos + 1);
-                            break;
-                        case ConsoleKey.Enter:
-                            break;
-                        case ConsoleKey.Escape:
-                            return settings[defaultSettingNum];
-                        default:
-                            if (key >= (ConsoleKey.D0 + START_LIST_NUMBER) &&
-                                key < (ConsoleKey.D0 + START_LIST_NUMBER) + settings.Length)
-                            {
-                                strPosNew = key - (ConsoleKey.D0 + START_LIST_NUMBER);
-                            }
-                            if (key >= (ConsoleKey.NumPad0 + START_LIST_NUMBER) &&
-                                key < (ConsoleKey.NumPad0 + START_LIST_NUMBER) + settings.Length)
-                            {
-                                strPosNew = key - (ConsoleKey.NumPad0 + START_LIST_NUMBER);
-                            }
-                            break;
-                    }
-                    HighlightStr(settings, strPos, strPosNew, enableAlligmend);
-                    strPos = strPosNew;
-                }
+                        ConsoleKey.UpArrow => (oldStrPos == 0) ? (settings.Length - 1) : (oldStrPos - 1),
+                        ConsoleKey.DownArrow => (oldStrPos == settings.Length - 1) ? (0) : (oldStrPos + 1),
+                        ConsoleKey.Escape => defaultSettingNum,
+                        >= ConsoleKey.D0 and <= ConsoleKey.D9 when
+                            key - ConsoleKey.D0 >= START_LIST_NUMBER &&
+                            key - ConsoleKey.D0 <= START_LIST_NUMBER + settings.Length - 1 =>
+                            key - ConsoleKey.D0 - START_LIST_NUMBER,
+                        >= ConsoleKey.NumPad0 and <= ConsoleKey.NumPad9 when
+                            key - ConsoleKey.NumPad0 >= START_LIST_NUMBER &&
+                            key - ConsoleKey.NumPad0 <= START_LIST_NUMBER + settings.Length - 1 =>
+                            key - ConsoleKey.NumPad0 - START_LIST_NUMBER,
+                        _ => oldStrPos
+                    };
+
+                } while (key is not ConsoleKey.Enter and not ConsoleKey.Escape);
                 Console.Clear();
             }
             return settings[strPos];
