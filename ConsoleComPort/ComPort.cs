@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AppSettings;
+using AppTools;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO.Ports;
@@ -41,7 +43,7 @@ namespace ConsoleComPort
         bool _statusRX = false;
 
         private readonly SerialPort _serialPort;
-        private Settings _settings;
+        private readonly Settings _settings;
 
         public ComPort()
         {
@@ -49,16 +51,16 @@ namespace ConsoleComPort
             _settings.Read();
             _serialPort = new SerialPort
             {
-                PortName = _settings.PortName.Value,
-                BaudRate = _settings.BaudRate.Value,
-                Parity = (Parity)Enum.Parse(typeof(Parity), _settings.Parity.Value),
-                DataBits = _settings.DataBits.Value,
-                StopBits = (System.IO.Ports.StopBits)Enum.Parse(typeof(StopBits), _settings.StopBits.Value),
-                Handshake = (Handshake)Enum.Parse(typeof(Handshake), _settings.Handshake.Value),
+                PortName = _settings.PortName,
+                BaudRate = _settings.BaudRate,
+                Parity = (Parity)Enum.Parse(typeof(Parity), _settings.Parity),
+                DataBits = _settings.DataBits,
+                StopBits = (System.IO.Ports.StopBits)Enum.Parse(typeof(StopBits), _settings.StopBits),
+                Handshake = (Handshake)Enum.Parse(typeof(Handshake), _settings.Handshake),
                 ReadTimeout = 1000
             };
-            _formatRx = (Format)Enum.Parse(typeof(Format), _settings.Format.Value);
-            Settings.Display(_settings);
+            _formatRx = (Format)Enum.Parse(typeof(Format), _settings.Format);
+            _settings.Display();
         }
 
         public void SetAllSettings()
@@ -70,23 +72,23 @@ namespace ConsoleComPort
             }
 
             Settings settings = _settings;
-            settings.PortName.Value = SetPortName(settings.PortName.Value);
-            settings.BaudRate.Value = SetBaudRate(settings.BaudRate.Value);
-            settings.Parity.Value = SetParity(settings.Parity.Value);
-            settings.DataBits.Value = SetDataBits(settings.DataBits.Value);
-            settings.StopBits.Value = SetStopBits(settings.StopBits.Value);
-            settings.Handshake.Value = SetHandshake(settings.Handshake.Value);
-            settings.Format.Value = SetFormat(settings.Format.Value);
-            settings.BytesPerLine.Value = SetBytesPerLine(settings.BytesPerLine.Value);
+            settings.PortName = SetPortName(settings.PortName);
+            settings.BaudRate = SetBaudRate(settings.BaudRate);
+            settings.Parity = SetParity(settings.Parity);
+            settings.DataBits = SetDataBits(settings.DataBits);
+            settings.StopBits = SetStopBits(settings.StopBits);
+            settings.Handshake = SetHandshake(settings.Handshake);
+            settings.Format = SetFormat(settings.Format);
+            settings.BytesPerLine = SetBytesPerLine(settings.BytesPerLine);
 
-            _serialPort.PortName = settings.PortName.Value;
-            _serialPort.BaudRate = settings.BaudRate.Value;
-            _serialPort.Parity = (Parity)Enum.Parse(typeof(Parity), settings.Parity.Value);
-            _serialPort.DataBits = settings.DataBits.Value;
-            _serialPort.StopBits = (System.IO.Ports.StopBits)Enum.Parse(typeof(StopBits), settings.StopBits.Value);
-            _serialPort.Handshake = (Handshake)Enum.Parse(typeof(Handshake), settings.Handshake.Value);
-            _formatRx = (Format)Enum.Parse(typeof(Format), settings.Format.Value);
-            Settings.Display(settings);
+            _serialPort.PortName = settings.PortName;
+            _serialPort.BaudRate = settings.BaudRate;
+            _serialPort.Parity = (Parity)Enum.Parse(typeof(Parity), settings.Parity);
+            _serialPort.DataBits = settings.DataBits;
+            _serialPort.StopBits = (System.IO.Ports.StopBits)Enum.Parse(typeof(StopBits), settings.StopBits);
+            _serialPort.Handshake = (Handshake)Enum.Parse(typeof(Handshake), settings.Handshake);
+            _formatRx = (Format)Enum.Parse(typeof(Format), settings.Format);
+            _settings.Display();
         }
 
         private static string SetPortName(string currentSettings)
@@ -146,14 +148,14 @@ namespace ConsoleComPort
         private static int SetBytesPerLine(int currentSettings) =>
             MyConsole.ReadNumber("BaudRate", currentSettings);
 
-        public void DisplaySettings() => Settings.Display(_settings);
+        public void DisplaySettings() => _settings.Display();
         public void SaveSetting() => _settings.Save();
         public void ReadSetting() => _settings.Read();
-        public void SaveSettingToFile() => Settings.SaveToFile(_settings);
+        public void SaveSettingToFile() => _settings.SaveToFile();
         public void ReadSettingFromFile()
         {
-            _settings = Settings.ReadFromFile<Settings>();
-            Settings.Display(_settings);
+            _settings.ReadFromFile();
+            _settings.Display();
         }
 
         public void Transmit(string message)
@@ -265,7 +267,7 @@ namespace ConsoleComPort
                         default:
                             break;
                     }
-                    if (++cnt >= _settings.BytesPerLine.Value)
+                    if (++cnt >= _settings.BytesPerLine)
                     {
                         MyConsole.WriteLine();
                         cnt = 0;
