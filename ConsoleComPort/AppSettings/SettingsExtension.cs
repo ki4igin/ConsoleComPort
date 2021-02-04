@@ -1,5 +1,4 @@
 ﻿using AppTools;
-using ConsoleComPort;
 using System;
 using System.Collections.Generic;
 using System.IO;
