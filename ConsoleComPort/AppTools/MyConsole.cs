@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ConsoleComPort
+namespace AppTools
 {
     static class MyConsole
     {

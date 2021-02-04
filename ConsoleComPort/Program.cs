@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AppTools;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,11 +10,11 @@ namespace ConsoleComPort
         static void Main()
         {
             Console.WriteLine();
+            
             ComPort comPort = new ComPort();
 
             /// Сохрание настроек после выхода из программы
             AppDomain.CurrentDomain.ProcessExit += new EventHandler((obj, ev) => comPort.SaveSetting());
-
 
             Dictionary<string, Action> commands = new()
             {
