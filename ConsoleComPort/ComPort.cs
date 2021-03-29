@@ -146,7 +146,7 @@ namespace ConsoleComPort
                 "Format",
                  Enum.GetNames(typeof(Format)).ToList().IndexOf(currentSettings));
         private static int SetBytesPerLine(int currentSettings) =>
-            MyConsole.ReadNumber("BaudRate", currentSettings);
+            MyConsole.ReadNumber("BytesPerLine", currentSettings);
 
         public void DisplaySettings() => _settings.Display();
         public void SaveSetting() => _settings.Save();
