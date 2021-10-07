@@ -4,9 +4,9 @@ using System.Text;
 
 namespace AppTools
 {
-    static class MyConsole
+    internal static class MyConsole
     {
-        static private string[] _cmdKeyWords = new string[1] { "" };
+        private static string[] _cmdKeyWords = new string[1] { "" };
         private static readonly object _lockWrtie = new();
         private static readonly List<string> _cmdHistory = new List<string>();
 

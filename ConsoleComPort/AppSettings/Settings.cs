@@ -11,7 +11,7 @@ namespace AppSettings
         [Description("DataBits")] public int DataBits { get; set; } = 8;
         [Description("StopBits")] public string StopBits { get; set; } = "One";
         [Description("Handshake")] public string Handshake { get; set; } = "None";
-        [Description("Format Receive")] public string Format { get; set; } = "ASCII";
+        [Description("Format Receive")] public string Format { get; set; } = "Ascii";
         [Description("Bytes per line")] public int BytesPerLine { get; set; } = 500;
     }
 }

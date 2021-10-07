@@ -12,23 +12,29 @@ namespace ConsoleComPort
 {
     public class ComPort
     {
-        public enum StopBits
+        private enum StopBits
         {
             One = 1,
             Two = 2,
             OnePointFive = 3
         }
-        public enum Format
+
+        private enum Format
         {
-            BIN = 0,
-            HEX,
-            ASCII
+            Bin = 0,
+            Hex,
+            Ascii
         }
         readonly string[] _baudRatesList =
         {
             "4800",
             "9600",
+            "19200",
+            "38400",
+            "57600",
             "115200",
+            "128000",
+            "256000",
             "Other"
         };
         readonly string[] _dataBitsList =
@@ -39,7 +45,7 @@ namespace ConsoleComPort
             "8"
         };
 
-        Format _formatRx = Format.ASCII;
+        Format _formatRx = Format.Ascii;
         bool _statusRX = false;
 
         private readonly SerialPort _serialPort;
@@ -191,7 +197,7 @@ namespace ConsoleComPort
             }
             else
             {
-                sendStr = message;
+                sendStr = System.Text.RegularExpressions.Regex.Unescape(message);
                 consoleStr = message;
             }
 
@@ -227,7 +233,7 @@ namespace ConsoleComPort
             _serialPort.ReadTimeout = 1000;
             MyConsole.WriteNewLineGreen($"Start Monitor {_serialPort.PortName}");
             _statusRX = true;
-            Task.Run(() => ReceiveProcess());
+            Task.Run(ReceiveProcess);
         }
         public void ReceiveStop()
         {
@@ -255,13 +261,17 @@ namespace ConsoleComPort
                     int value = _serialPort.ReadByte();
                     switch (_formatRx)
                     {
-                        case Format.BIN:
+                        case Format.Bin:
                             MyConsole.Write($"0b{Convert.ToString(value, 2)} ");
                             break;
-                        case Format.HEX:
+                        case Format.Hex:
                             MyConsole.Write($"0x{value:X2} ");
                             break;
-                        case Format.ASCII:
+                        case Format.Ascii:
+                            if (value =='\n')
+                            {
+                                cnt = 0;
+                            }
                             MyConsole.Write($"{(char)value}");
                             break;
                         default:

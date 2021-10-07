@@ -18,12 +18,12 @@ namespace ConsoleComPort
 
             Dictionary<string, Action> commands = new()
             {
-                ["start"] = comPort.ReceiveStart,
-                ["stop"] = comPort.ReceiveStop,
+                ["start monitor"] = comPort.ReceiveStart,
+                ["stop monitor"] = comPort.ReceiveStop,
                 ["reboot"] = comPort.ReceiveReboot,
                 ["clear"] = Console.Clear,
                 ["settings"] = comPort.SetAllSettings,
-                ["quit"] = null,
+                ["quit programm"] = null,
                 ["display settings"] = comPort.DisplaySettings,
                 ["save settings"] = comPort.SaveSetting,
                 ["save settings to file"] = comPort.SaveSettingToFile,
