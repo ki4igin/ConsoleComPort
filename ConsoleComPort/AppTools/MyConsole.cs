@@ -183,10 +183,7 @@ namespace AppTools
                     case ConsoleKey.Enter:
                         break;
                     default:
-                        if (keyInfo.Key >= ConsoleKey.D0 && keyInfo.Key <= ConsoleKey.Z ||
-                            keyInfo.Key >= ConsoleKey.NumPad0 && keyInfo.Key <= ConsoleKey.Divide ||
-                            keyInfo.Key >= ConsoleKey.Oem1 && keyInfo.Key <= ConsoleKey.Oem102 ||
-                            keyInfo.Key == ConsoleKey.Spacebar)
+                        if (keyInfo.Key is >= ConsoleKey.D0 and <= ConsoleKey.Z or >= ConsoleKey.NumPad0 and <= ConsoleKey.Divide or >= ConsoleKey.Oem1 and <= ConsoleKey.Oem102 or ConsoleKey.Spacebar)
                         {
                             sb.Insert(posCursorCmd, keyInfo.KeyChar);
                             posCursorCmd++;
@@ -212,8 +209,8 @@ namespace AppTools
             Console.ForegroundColor = ConsoleColor.White;
         }
 
-        const int ALLIGMEND = 6;
-        const int START_LIST_NUMBER = 1;
+        const int Alligmend = 6;
+        const int StartListNumber = 1;
 
         public static string SelectFromList(
             string[] settings,
@@ -234,8 +231,8 @@ namespace AppTools
                 int cursorTopInit = Console.CursorTop;
                 foreach (string setting in settings)
                 {
-                    var str = $"{(enableAlligmend ? $"{setting,ALLIGMEND}" : $"{setting}")}";
-                    Console.WriteLine($"[{strPos++ + START_LIST_NUMBER}] {str}");
+                    var str = $"{(enableAlligmend ? $"{setting,Alligmend}" : $"{setting}")}";
+                    Console.WriteLine($"[{strPos++ + StartListNumber}] {str}");
                 }
 
                 strPos = defaultSettingNum;
@@ -254,13 +251,13 @@ namespace AppTools
                         ConsoleKey.DownArrow => (oldStrPos == settings.Length - 1) ? (0) : (oldStrPos + 1),
                         ConsoleKey.Escape => defaultSettingNum,
                         >= ConsoleKey.D0 and <= ConsoleKey.D9 when
-                            key - ConsoleKey.D0 >= START_LIST_NUMBER &&
-                            key - ConsoleKey.D0 <= START_LIST_NUMBER + settings.Length - 1 =>
-                            key - ConsoleKey.D0 - START_LIST_NUMBER,
+                            key - ConsoleKey.D0 >= StartListNumber &&
+                            key - ConsoleKey.D0 <= StartListNumber + settings.Length - 1 =>
+                            key - ConsoleKey.D0 - StartListNumber,
                         >= ConsoleKey.NumPad0 and <= ConsoleKey.NumPad9 when
-                            key - ConsoleKey.NumPad0 >= START_LIST_NUMBER &&
-                            key - ConsoleKey.NumPad0 <= START_LIST_NUMBER + settings.Length - 1 =>
-                            key - ConsoleKey.NumPad0 - START_LIST_NUMBER,
+                            key - ConsoleKey.NumPad0 >= StartListNumber &&
+                            key - ConsoleKey.NumPad0 <= StartListNumber + settings.Length - 1 =>
+                            key - ConsoleKey.NumPad0 - StartListNumber,
                         _ => oldStrPos
                     };
 
@@ -272,13 +269,13 @@ namespace AppTools
 
         private static void HighlightStr(string[] vs, int strPosOld, int strPosNew, bool enableAlligmend = false)
         {
-            var str1 = $"{(enableAlligmend ? $"{vs[strPosOld],ALLIGMEND}" : $"{vs[strPosOld]}")}";
+            var str1 = $"{(enableAlligmend ? $"{vs[strPosOld],Alligmend}" : $"{vs[strPosOld]}")}";
 
-            Console.Write($"[{strPosOld + START_LIST_NUMBER}] {str1}\r");
+            Console.Write($"[{strPosOld + StartListNumber}] {str1}\r");
             Console.CursorTop += (strPosNew - strPosOld);
             Console.BackgroundColor = ConsoleColor.DarkGreen;
-            var str2 = $"{(enableAlligmend ? $"{vs[strPosNew],ALLIGMEND}" : $"{vs[strPosNew]}")}";
-            Console.Write($"[{strPosNew + START_LIST_NUMBER}] {str2}\r");
+            var str2 = $"{(enableAlligmend ? $"{vs[strPosNew],Alligmend}" : $"{vs[strPosNew]}")}";
+            Console.Write($"[{strPosNew + StartListNumber}] {str2}\r");
             Console.BackgroundColor = ConsoleColor.Black;
         }
 
