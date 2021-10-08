@@ -2,19 +2,20 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace AppTools
+namespace ConsoleComPort.AppTools
 {
     internal static class MyConsole
     {
-        private static string[] _cmdKeyWords = new string[1] { "" };
+        private static string[] _cmdKeyWords = { "" };
         private static readonly object _lockWrtie = new();
-        private static readonly List<string> _cmdHistory = new List<string>();
+        private static readonly List<string> _cmdHistory = new();
 
         private static int _posCursorCmd = 0;
         private static int _posCursorData = 0;
 
-        static string _cmdStr;
-        static string CmdStr
+        private static string _cmdStr;
+
+        private static string CmdStr
         {
             get => _cmdStr;
             set
@@ -44,18 +45,20 @@ namespace AppTools
         public static void WriteLineRed(string str) => WriteLine(str, ConsoleColor.Red);
         public static void WriteLineYellow(string str) => WriteLine(str, ConsoleColor.DarkYellow);
 
-        public static void WriteNewLine(string str, ConsoleColor consoleColor)
+        private static void WriteNewLine(string str, ConsoleColor consoleColor)
         {
             Console.ForegroundColor = consoleColor;
             WriteNewLine(str);
             Console.ForegroundColor = ConsoleColor.White;
         }
-        public static void WriteNewLine(string str = "")
+
+        private static void WriteNewLine(string str = "")
         {
             var tempStr = _posCursorData == 0 ? $"{str}\r\n" : $"\r\n{str}\r\n";
             Write(tempStr);
         }
-        public static void WriteLine(string str, ConsoleColor consoleColor)
+
+        private static void WriteLine(string str, ConsoleColor consoleColor)
         {
             Console.ForegroundColor = consoleColor;
             WriteLine(str);
@@ -209,17 +212,17 @@ namespace AppTools
             Console.ForegroundColor = ConsoleColor.White;
         }
 
-        const int Alligmend = 6;
-        const int StartListNumber = 1;
+        private const int Alignment = 6;
+        private const int StartListNumber = 1;
 
         public static string SelectFromList(
             string[] settings,
-            string nameSetting = "Parametrs",
+            string nameSetting = "ParameterAlignment",
             int defaultSettingNum = 0,
             string comment = "",
-            bool enableAlligmend = false)
+            bool enableAlignment = false)
         {
-            int strPos = 0;
+            var strPos = 0;
             lock (_lockWrtie)
             {
                 Console.CursorVisible = false;
@@ -228,10 +231,10 @@ namespace AppTools
 
                 ConsoleWriteLineGreen($"Available {nameSetting}:");
                 Console.WriteLine(comment);
-                int cursorTopInit = Console.CursorTop;
-                foreach (string setting in settings)
+                var cursorTopInit = Console.CursorTop;
+                foreach (var setting in settings)
                 {
-                    var str = $"{(enableAlligmend ? $"{setting,Alligmend}" : $"{setting}")}";
+                    var str = $"{(enableAlignment ? $"{setting,Alignment}" : $"{setting}")}";
                     Console.WriteLine($"[{strPos++ + StartListNumber}] {str}");
                 }
 
@@ -239,10 +242,10 @@ namespace AppTools
                 Console.CursorTop = cursorTopInit + strPos;
 
                 ConsoleKey key;
-                int oldStrPos = strPos;
+                var oldStrPos = strPos;
                 do
                 {
-                    HighlightStr(settings, oldStrPos, strPos, enableAlligmend);
+                    HighlightStr(settings, oldStrPos, strPos, enableAlignment);
                     oldStrPos = strPos;
                     key = Console.ReadKey(true).Key;
                     strPos = key switch
@@ -267,24 +270,24 @@ namespace AppTools
             return settings[strPos];
         }
 
-        private static void HighlightStr(string[] vs, int strPosOld, int strPosNew, bool enableAlligmend = false)
+        private static void HighlightStr(string[] vs, int strPosOld, int strPosNew, bool enableAlignment = false)
         {
-            var str1 = $"{(enableAlligmend ? $"{vs[strPosOld],Alligmend}" : $"{vs[strPosOld]}")}";
+            var str1 = $"{(enableAlignment ? $"{vs[strPosOld],Alignment}" : $"{vs[strPosOld]}")}";
 
             Console.Write($"[{strPosOld + StartListNumber}] {str1}\r");
             Console.CursorTop += (strPosNew - strPosOld);
             Console.BackgroundColor = ConsoleColor.DarkGreen;
-            var str2 = $"{(enableAlligmend ? $"{vs[strPosNew],Alligmend}" : $"{vs[strPosNew]}")}";
+            var str2 = $"{(enableAlignment ? $"{vs[strPosNew],Alignment}" : $"{vs[strPosNew]}")}";
             Console.Write($"[{strPosNew + StartListNumber}] {str2}\r");
             Console.BackgroundColor = ConsoleColor.Black;
         }
 
         public static int ReadNumber(
-            string nameSetting = "Parametrs",
+            string nameSetting = "Parameters",
             int defaultValue = 0,
             Predicate<int> validator = default)
         {
-            int result = defaultValue;
+            var result = defaultValue;
             lock (_lockWrtie)
             {
 

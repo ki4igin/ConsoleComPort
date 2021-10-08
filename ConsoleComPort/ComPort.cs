@@ -7,24 +7,19 @@ using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ConsoleComPort.AppTools;
 
 namespace ConsoleComPort
 {
     public class ComPort
     {
-        private enum StopBits
-        {
-            One = 1,
-            Two = 2,
-            OnePointFive = 3
-        }
-
         private enum Format
         {
             Bin = 0,
             Hex,
             Ascii
         }
+
         readonly string[] _baudRatesList =
         {
             "4800",
@@ -37,6 +32,7 @@ namespace ConsoleComPort
             "256000",
             "Other"
         };
+
         readonly string[] _dataBitsList =
         {
             "5",
@@ -45,8 +41,8 @@ namespace ConsoleComPort
             "8"
         };
 
-        Format _formatRx = Format.Ascii;
-        bool _statusRX = false;
+        Format _formatRx;
+        bool _statusRx;
 
         private readonly SerialPort _serialPort;
         private readonly Settings _settings;
@@ -59,19 +55,19 @@ namespace ConsoleComPort
             {
                 PortName = _settings.PortName,
                 BaudRate = _settings.BaudRate,
-                Parity = (Parity)Enum.Parse(typeof(Parity), _settings.Parity),
+                Parity = (Parity) Enum.Parse(typeof(Parity), _settings.Parity),
                 DataBits = _settings.DataBits,
-                StopBits = (System.IO.Ports.StopBits)Enum.Parse(typeof(StopBits), _settings.StopBits),
-                Handshake = (Handshake)Enum.Parse(typeof(Handshake), _settings.Handshake),
+                StopBits = (StopBits) Enum.Parse(typeof(StopBits), _settings.StopBits),
+                Handshake = (Handshake) Enum.Parse(typeof(Handshake), _settings.Handshake),
                 ReadTimeout = 1000
             };
-            _formatRx = (Format)Enum.Parse(typeof(Format), _settings.Format);
+            _formatRx = (Format) Enum.Parse(typeof(Format), _settings.Format);
             _settings.Display();
         }
 
         public void SetAllSettings()
         {
-            if (_statusRX)
+            if (_statusRx)
             {
                 MyConsole.WriteNewLineRed("First stop monitor");
                 return;
@@ -89,11 +85,11 @@ namespace ConsoleComPort
 
             _serialPort.PortName = settings.PortName;
             _serialPort.BaudRate = settings.BaudRate;
-            _serialPort.Parity = (Parity)Enum.Parse(typeof(Parity), settings.Parity);
+            _serialPort.Parity = (Parity) Enum.Parse(typeof(Parity), settings.Parity);
             _serialPort.DataBits = settings.DataBits;
-            _serialPort.StopBits = (System.IO.Ports.StopBits)Enum.Parse(typeof(StopBits), settings.StopBits);
-            _serialPort.Handshake = (Handshake)Enum.Parse(typeof(Handshake), settings.Handshake);
-            _formatRx = (Format)Enum.Parse(typeof(Format), settings.Format);
+            _serialPort.StopBits = (StopBits) Enum.Parse(typeof(StopBits), settings.StopBits);
+            _serialPort.Handshake = (Handshake) Enum.Parse(typeof(Handshake), settings.Handshake);
+            _formatRx = (Format) Enum.Parse(typeof(Format), settings.Format);
             _settings.Display();
         }
 
@@ -104,36 +100,63 @@ namespace ConsoleComPort
             {
                 return "None";
             }
+
+            List<string> portNamesList = new();
+
+            foreach (var portName in portNames)
+            {
+                SerialPort serialPort = new(portName);
+                try
+                {
+                    serialPort.Open();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    serialPort.Close();
+                    continue;
+                }
+                catch (System.IO.FileNotFoundException)
+                {
+                    serialPort.Close();
+                    continue;
+                }
+
+                portNamesList.Add(portName);
+                serialPort.Close();
+            }
+
+            portNames = portNamesList.OrderBy(p => Convert.ToInt32(p.Remove(0, 3))).Distinct().ToArray();
+
             var ind = portNames.ToList().IndexOf(currentSettings);
             ind = ind >= 0 ? ind : 0;
             return MyConsole.SelectFromList(portNames, "Port", ind);
         }
+
         private int SetBaudRate(int currentSettings)
         {
             var ind = _baudRatesList.ToList().IndexOf(currentSettings.ToString());
             ind = ind >= 0 ? ind : 0;
             var baudRateStr = MyConsole.SelectFromList(_baudRatesList, "BaudRate", ind);
             var baudRate = int.Parse(_baudRatesList[ind]);
-            if (baudRateStr == _baudRatesList.Last())
-            {
-                baudRate = MyConsole.ReadNumber("BaudRate", baudRate);
-            }
-            else
-            {
-                baudRate = int.Parse(baudRateStr);
-            }
+            baudRate = baudRateStr == _baudRatesList.Last()
+                ? MyConsole.ReadNumber("BaudRate", baudRate)
+                : int.Parse(baudRateStr);
+
             return baudRate;
         }
+
         private static string SetParity(string currentSettings) =>
             MyConsole.SelectFromList(
                 Enum.GetNames(typeof(Parity)),
                 "Parity",
                 Enum.GetNames(typeof(Parity)).ToList().IndexOf(currentSettings));
+
         private static string SetHandshake(string currentSettings) =>
             MyConsole.SelectFromList(
                 Enum.GetNames(typeof(Handshake)),
                 "Handshake",
                 Enum.GetNames(typeof(Handshake)).ToList().IndexOf(currentSettings));
+
         private int SetDataBits(int currentSettings)
         {
             var ind = _dataBitsList.ToList().IndexOf(currentSettings.ToString());
@@ -141,16 +164,19 @@ namespace ConsoleComPort
             var str = MyConsole.SelectFromList(_dataBitsList, "BaudRate", ind);
             return int.Parse(str);
         }
+
         private static string SetStopBits(string currentSettings) =>
             MyConsole.SelectFromList(
                 Enum.GetNames(typeof(StopBits)),
                 "StopBits",
                 Enum.GetNames(typeof(StopBits)).ToList().IndexOf(currentSettings));
+
         private static string SetFormat(string currentSettings) =>
             MyConsole.SelectFromList(
                 Enum.GetNames(typeof(Format)),
                 "Format",
-                 Enum.GetNames(typeof(Format)).ToList().IndexOf(currentSettings));
+                Enum.GetNames(typeof(Format)).ToList().IndexOf(currentSettings));
+
         private static int SetBytesPerLine(int currentSettings) =>
             MyConsole.ReadNumber("BytesPerLine", currentSettings);
 
@@ -158,6 +184,7 @@ namespace ConsoleComPort
         public void SaveSetting() => _settings.Save();
         public void ReadSetting() => _settings.Read();
         public void SaveSettingToFile() => _settings.SaveToFile();
+
         public void ReadSettingFromFile()
         {
             _settings.ReadFromFile();
@@ -166,7 +193,7 @@ namespace ConsoleComPort
 
         public void Transmit(string message)
         {
-            if (_statusRX == false)
+            if (_statusRx == false)
             {
                 return;
             }
@@ -182,17 +209,18 @@ namespace ConsoleComPort
                     .Replace("-", "")
                     .ToUpper();
                 List<char> listByte = new();
-                List<string> listStrs = new();
-                for (int i = 0; i < message.Length - 1; i += 2)
+                List<string> listStrings = new();
+                for (var i = 0; i < message.Length - 1; i += 2)
                 {
                     var strByte = message[i..(i + 2)];
                     if (byte.TryParse(strByte, NumberStyles.HexNumber, null, out byte value))
                     {
-                        listByte.Add((char)value);
-                        listStrs.Add(strByte);
+                        listByte.Add((char) value);
+                        listStrings.Add(strByte);
                     }
+
                     sendStr = new string(listByte.ToArray());
-                    consoleStr = string.Join(" ", listStrs.Select(str => $"0x{str}"));
+                    consoleStr = string.Join(" ", listStrings.Select(str => $"0x{str}"));
                 }
             }
             else
@@ -201,7 +229,7 @@ namespace ConsoleComPort
                 consoleStr = message;
             }
 
-            if (sendStr.Length > 0)
+            if (sendStr is {Length: > 0})
             {
                 _serialPort.Write(sendStr);
                 MyConsole.WriteNewLineYellow(consoleStr);
@@ -210,14 +238,15 @@ namespace ConsoleComPort
             {
                 MyConsole.WriteNewLineRed("Format send data not correct");
             }
-
         }
+
         public void ReceiveStart()
         {
-            if (_statusRX)
+            if (_statusRx)
             {
                 return;
             }
+
             if (_serialPort.IsOpen == false)
             {
                 try
@@ -230,31 +259,35 @@ namespace ConsoleComPort
                     return;
                 }
             }
+
             _serialPort.ReadTimeout = 1000;
             MyConsole.WriteNewLineGreen($"Start Monitor {_serialPort.PortName}");
-            _statusRX = true;
+            _statusRx = true;
             Task.Run(ReceiveProcess);
         }
+
         public void ReceiveStop()
         {
-            _statusRX = false;
+            _statusRx = false;
             _serialPort.ReadTimeout = 100;
         }
+
         public void ReceiveReboot()
         {
             ReceiveStop();
             while (_serialPort.IsOpen)
             {
-
             }
+
             Thread.Sleep(500);
             ReceiveStart();
         }
+
         private void ReceiveProcess()
         {
             int cnt = 0;
             _serialPort.DiscardInBuffer();
-            while (_statusRX)
+            while (_statusRx)
             {
                 try
                 {
@@ -268,15 +301,15 @@ namespace ConsoleComPort
                             MyConsole.Write($"0x{value:X2} ");
                             break;
                         case Format.Ascii:
-                            if (value =='\n')
+                            if (value == '\n')
                             {
                                 cnt = 0;
                             }
-                            MyConsole.Write($"{(char)value}");
-                            break;
-                        default:
+
+                            MyConsole.Write($"{(char) value}");
                             break;
                     }
+
                     if (++cnt >= _settings.BytesPerLine)
                     {
                         MyConsole.WriteLine();
@@ -285,12 +318,11 @@ namespace ConsoleComPort
                 }
                 catch (TimeoutException)
                 {
-
                 }
             }
+
             _serialPort.Close();
             MyConsole.WriteNewLineRed($"Stop Monitor {_serialPort.PortName}");
         }
-
     }
 }

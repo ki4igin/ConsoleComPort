@@ -2,19 +2,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ConsoleComPort.AppTools;
 
 namespace ConsoleComPort
 {
-    class Program
+    internal static class Program
     {
-        static void Main()
+        private static void Main()
         {
             Console.WriteLine();
             
-            ComPort comPort = new ComPort();
+            ComPort comPort = new();
 
-            /// Сохрание настроек после выхода из программы
-            AppDomain.CurrentDomain.ProcessExit += new EventHandler((obj, ev) => comPort.SaveSetting());
+            // Saving settings after exiting the program
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => comPort.SaveSetting();
 
             Dictionary<string, Action> commands = new()
             {
@@ -23,7 +24,7 @@ namespace ConsoleComPort
                 ["reboot"] = comPort.ReceiveReboot,
                 ["clear"] = Console.Clear,
                 ["settings"] = comPort.SetAllSettings,
-                ["quit programm"] = null,
+                ["quit program"] = null,
                 ["display settings"] = comPort.DisplaySettings,
                 ["save settings"] = comPort.SaveSetting,
                 ["save settings to file"] = comPort.SaveSettingToFile,
@@ -35,6 +36,7 @@ namespace ConsoleComPort
             while (true)
             {
                 string command = MyConsole.ReadLine();
+                string str = command;
                 command = command.ToLower();
                 if (commands.TryGetValue(command, out Action executeCmd))
                 {
@@ -46,7 +48,7 @@ namespace ConsoleComPort
                 }
                 else
                 {
-                    comPort.Transmit(command);
+                    comPort.Transmit(str);
                 }
             }
         }
