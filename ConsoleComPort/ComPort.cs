@@ -1,5 +1,4 @@
 ﻿using AppSettings;
-using AppTools;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -318,6 +317,11 @@ namespace ConsoleComPort
                 }
                 catch (TimeoutException)
                 {
+                }
+                catch (Exception e)
+                {
+                    MyConsole.WriteLineRed(e.Message);
+                    ReceiveStop();
                 }
             }
 
