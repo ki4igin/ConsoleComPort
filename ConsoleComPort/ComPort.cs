@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO.Ports;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleComPort.AppTools;
@@ -197,7 +198,7 @@ namespace ConsoleComPort
                 return;
             }
 
-            string sendStr = default;
+            byte[] sendBytes = default;
             string consoleStr = default;
             if (message.Length >= 2 && message[..2] == "0x")
             {
@@ -207,30 +208,58 @@ namespace ConsoleComPort
                     .Replace(" ", "")
                     .Replace("-", "")
                     .ToUpper();
-                List<char> listByte = new();
+                List<byte> listByte = new();
                 List<string> listStrings = new();
                 for (var i = 0; i < message.Length - 1; i += 2)
                 {
                     var strByte = message[i..(i + 2)];
                     if (byte.TryParse(strByte, NumberStyles.HexNumber, null, out byte value))
                     {
-                        listByte.Add((char) value);
+                        listByte.Add(value);
                         listStrings.Add(strByte);
                     }
-
-                    sendStr = new string(listByte.ToArray());
-                    consoleStr = string.Join(" ", listStrings.Select(str => $"0x{str}"));
+                    
                 }
+                sendBytes = listByte.ToArray();
+                consoleStr = string.Join(" ", listStrings.Select(str => $"0x{str}"));
+            }
+            else if (message.Length >= 10 && message[..2] == "0b")
+            {
+                message = message
+                    .Replace("_", "")
+                    .Replace("0b", "")
+                    .Replace(" ", "")
+                    .Replace("-", "")
+                    .ToUpper();
+                List<byte> listByte = new();
+                List<string> listStrings = new();
+                for (var i = 0; i < message.Length - 1; i += 8)
+                {
+                    var strByte = message[i..(i + 8)];
+
+                    try
+                    {
+                        byte value = Convert.ToByte(strByte, 2);
+                        listByte.Add(value);
+                        listStrings.Add(strByte);
+                    }
+                    catch (FormatException e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+                sendBytes = listByte.ToArray();
+                consoleStr = string.Join(" ", listStrings.Select(str => $"0b{str}"));
             }
             else
             {
-                sendStr = System.Text.RegularExpressions.Regex.Unescape(message);
+                sendBytes = Encoding.ASCII.GetBytes(message);
                 consoleStr = message;
             }
 
-            if (sendStr is {Length: > 0})
+            if (sendBytes is {Length: > 0})
             {
-                _serialPort.Write(sendStr);
+                _serialPort.Write(sendBytes, 0, sendBytes.Length);
                 MyConsole.WriteNewLineYellow(consoleStr);
             }
             else
