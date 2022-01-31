@@ -1,7 +1,6 @@
 ﻿using AppSettings;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
@@ -21,7 +20,7 @@ namespace ConsoleComPort
             Ascii
         }
 
-        readonly string[] _baudRatesList =
+        private readonly string[] _baudRatesList =
         {
             "4800",
             "9600",
@@ -34,7 +33,7 @@ namespace ConsoleComPort
             "Other"
         };
 
-        readonly string[] _dataBitsList =
+        private readonly string[] _dataBitsList =
         {
             "5",
             "6",
@@ -42,8 +41,8 @@ namespace ConsoleComPort
             "8"
         };
 
-        Format _formatRx;
-        bool _statusRx;
+        private Format _formatRx;
+        private bool _statusRx;
 
         private readonly SerialPort _serialPort;
         private readonly Settings _settings;
@@ -56,13 +55,13 @@ namespace ConsoleComPort
             {
                 PortName = _settings.PortName,
                 BaudRate = _settings.BaudRate,
-                Parity = (Parity)Enum.Parse(typeof(Parity), _settings.Parity),
+                Parity = (Parity) Enum.Parse(typeof(Parity), _settings.Parity),
                 DataBits = _settings.DataBits,
-                StopBits = (StopBits)Enum.Parse(typeof(StopBits), _settings.StopBits),
-                Handshake = (Handshake)Enum.Parse(typeof(Handshake), _settings.Handshake),
+                StopBits = (StopBits) Enum.Parse(typeof(StopBits), _settings.StopBits),
+                Handshake = (Handshake) Enum.Parse(typeof(Handshake), _settings.Handshake),
                 ReadTimeout = 1000
             };
-            _formatRx = (Format)Enum.Parse(typeof(Format), _settings.Format);
+            _formatRx = (Format) Enum.Parse(typeof(Format), _settings.Format);
             _settings.Display();
         }
 
@@ -74,23 +73,22 @@ namespace ConsoleComPort
                 return;
             }
 
-            Settings settings = _settings;
-            settings.PortName = SetPortName(settings.PortName);
-            settings.BaudRate = SetBaudRate(settings.BaudRate);
-            settings.Parity = SetParity(settings.Parity);
-            settings.DataBits = SetDataBits(settings.DataBits);
-            settings.StopBits = SetStopBits(settings.StopBits);
-            settings.Handshake = SetHandshake(settings.Handshake);
-            settings.Format = SetFormat(settings.Format);
-            settings.BytesPerLine = SetBytesPerLine(settings.BytesPerLine);
+            _settings.PortName = SetPortName(_settings.PortName);
+            _settings.BaudRate = SetBaudRate(_settings.BaudRate);
+            _settings.Parity = SetParity(_settings.Parity);
+            _settings.DataBits = SetDataBits(_settings.DataBits);
+            _settings.StopBits = SetStopBits(_settings.StopBits);
+            _settings.Handshake = SetHandshake(_settings.Handshake);
+            _settings.Format = SetFormat(_settings.Format);
+            _settings.BytesPerLine = SetBytesPerLine(_settings.BytesPerLine);
 
-            _serialPort.PortName = settings.PortName;
-            _serialPort.BaudRate = settings.BaudRate;
-            _serialPort.Parity = (Parity)Enum.Parse(typeof(Parity), settings.Parity);
-            _serialPort.DataBits = settings.DataBits;
-            _serialPort.StopBits = (StopBits)Enum.Parse(typeof(StopBits), settings.StopBits);
-            _serialPort.Handshake = (Handshake)Enum.Parse(typeof(Handshake), settings.Handshake);
-            _formatRx = (Format)Enum.Parse(typeof(Format), settings.Format);
+            _serialPort.PortName = _settings.PortName;
+            _serialPort.BaudRate = _settings.BaudRate;
+            _serialPort.Parity = (Parity) Enum.Parse(typeof(Parity), _settings.Parity);
+            _serialPort.DataBits = _settings.DataBits;
+            _serialPort.StopBits = (StopBits) Enum.Parse(typeof(StopBits), _settings.StopBits);
+            _serialPort.Handshake = (Handshake) Enum.Parse(typeof(Handshake), _settings.Handshake);
+            _formatRx = (Format) Enum.Parse(typeof(Format), _settings.Format);
             _settings.Display();
         }
 
@@ -199,95 +197,156 @@ namespace ConsoleComPort
                 return;
             }
 
-            byte[] sendBytes;
-            string consoleStr;
-            if (message.Length >= 2 && (message[..2] == "0x" || message[..2] == "0b" || message[..2] == "0d"))
-            {
-                message = message
-                    .Replace("_", "")
-                    .Replace("-", "");
-                string[] words = Regex.Split(message, @"(0x\S*)|(0b\S*)|(0d\S*)")
-                    .Where(s => s != string.Empty && s != " ")
-                    .ToArray();
+            MyConsole.WriteLine(message);
+            var sendBytes = ParseMessage(message);
 
-                List<byte> listSendBytes = new();
-                List<string> listConsoleStrings = new();
-                foreach (string word in words)
-                {
-                    switch (word[..2])
-                    {
-                        case "0x":
-                        {
-                            string temp = word[2..].ToUpper();
-                            if (temp.Length % 2 != 0) temp = temp.Insert(0, "0");
-                            var strBytes = Enumerable
-                                .Range(0, temp.Length / 2)
-                                .Select(i => temp[(2 * i)..(2 * i + 2)])
-                                .ToArray();
-                            foreach (string strByte in strBytes)
-                            {
-                                if (byte.TryParse(strByte, NumberStyles.HexNumber, null, out byte value))
-                                {
-                                    listSendBytes.Add(value);
-                                    listConsoleStrings.Add("0x" + strByte);
-                                }
-                                else
-                                {
-                                    MyConsole.WriteLineRed($"Unknown format: {strByte}");
-                                }
-                            }
 
-                            break;
-                        }
-                        case "0b":
-                        {
-                            string temp = word[2..];
-                            if (temp.Length % 8 != 0) temp = temp.Insert(0, new string('0', (8 - temp.Length % 8)));
-                            var strBytes = Enumerable
-                                .Range(0, temp.Length / 8)
-                                .Select(i => temp[(8 * i)..(8 * i + 8)])
-                                .ToArray();
-                            foreach (string strByte in strBytes)
-                            {
-                                try
-                                {
-                                    byte value = Convert.ToByte(strByte, 2);
-                                    listSendBytes.Add(value);
-                                    listConsoleStrings.Add("0b" + strByte);
-                                }
-                                catch (FormatException)
-                                {
-                                    MyConsole.WriteLineRed($"Unknown format: {strByte}");
-                                }
-                            }
-
-                            break;
-                        }
-                        default:
-                            MyConsole.WriteLineRed($"Error string: {word}");
-                            break;
-                    }
-                }
-
-                consoleStr = string.Join(" ", listConsoleStrings);
-                sendBytes = listSendBytes.ToArray();
-            }
-            else
-            {
-                sendBytes = Encoding.ASCII.GetBytes(message);
-                consoleStr = message;
-            }
-
-            if (sendBytes is { Length: > 0 })
+            if (sendBytes is {Length: > 0})
             {
                 _serialPort.Write(sendBytes, 0, sendBytes.Length);
-                MyConsole.WriteNewLineYellow(consoleStr);
+                var consoleStr = string.Join(" ", sendBytes.Select(b => $"0x{b:X2}"));
+                MyConsole.WriteLineYellow(consoleStr);
             }
             else
             {
                 MyConsole.WriteNewLineRed("Format send data not correct");
             }
         }
+
+        private static byte[] ParseMessage(string message)
+        {
+            byte[] sendBytes;
+            List<string> listSendBits = new();
+            message = Regex.Replace(message, @"[_,-]", "");
+
+            if (Regex.IsMatch(message, @"^[0-9]{1,3}[x,b,d]"))
+            {
+                var words = message.Split(" ");
+                foreach (var word in words)
+                {
+                    var bitValue = string.Empty;
+                    if (Regex.IsMatch(word, @"^[0-9]{0,3}[x][0-F]*$", RegexOptions.IgnoreCase))
+                    {
+                        bitValue = ConvertWordToBitString(word[0] == 'x' ? $"0{word}" : word, 'x');
+                    }
+                    else if (Regex.IsMatch(word, @"^[0-9]{0,3}[b][0,1]*$", RegexOptions.IgnoreCase))
+                    {
+                        bitValue = ConvertWordToBitString(word[0] == 'b' ? $"0{word}" : word, 'b');
+                    }
+                    else if (Regex.IsMatch(word, @"^[0-9]{0,3}[d][0-9]*$", RegexOptions.IgnoreCase))
+                    {
+                        bitValue = ConvertWordToBitString(word[0] == 'd' ? $"0{word}" : word, 'd');
+                    }
+                    else if (Regex.IsMatch(word, @"^[0-9]*$", RegexOptions.IgnoreCase))
+                    {
+                        bitValue = ConvertWordToBitString($"0d{word}", 'd');
+                    }
+                    else
+                    {
+                        MyConsole.WriteLineYellow($"Warning: word {word} has unknown format");
+                    }
+
+                    if (bitValue != string.Empty)
+                    {
+                        listSendBits.Add(bitValue);
+                    }
+                }
+
+                var sendStr = string.Join("", listSendBits);
+
+
+                var numberAddZeros = (8 - sendStr.Length % 8) % 8;
+                if (numberAddZeros != 0)
+                {
+                    sendStr = new string('0', numberAddZeros) + sendStr;
+                    MyConsole.WriteLineYellow($"Warning: Added {numberAddZeros} zeros");
+                }
+
+                var numBytes = sendStr.Length / 8;
+                sendBytes = new byte[numBytes];
+                for (var i = 0; i < numBytes; i++)
+                {
+                    sendBytes[i] = Convert.ToByte(sendStr.Substring(8 * i, 8), 2);
+                }
+            }
+            else
+            {
+                sendBytes = Encoding.ASCII.GetBytes(message);
+            }
+
+            return sendBytes;
+        }
+
+        private static string ConvertWordToBitString(string word, char separator)
+        {
+            var numberBitsAndValue = word.Split(separator, 2);
+            var numberBits = int.Parse(numberBitsAndValue[0]);
+            var value = numberBitsAndValue[1].ToUpper();
+
+            var bitValue = value;
+
+            bitValue = separator switch
+            {
+                'b' => bitValue,
+                'x' => ConvertStringNumberToBinary(bitValue, 16),
+                'd' => ConvertStringNumberToBinary(bitValue, 10),
+                _ => throw new ArgumentOutOfRangeException(nameof(separator), separator, null)
+            };
+
+            var deltaNumBits = numberBits - bitValue.Length;
+            var numberAddZeros = (8 - bitValue.Length % 8) % 8;
+            bitValue = numberBits switch
+            {
+                0 => new string('0', numberAddZeros) + bitValue,
+                _ => deltaNumBits switch
+                {
+                    > 0 => new string('0', deltaNumBits) + bitValue,
+                    < 0 => bitValue.Remove(0, -deltaNumBits),
+                    _ => bitValue
+                }
+            };
+
+            return bitValue;
+        }
+
+        private static string ConvertStringNumberToBinary(string str, int fromBase)
+        {
+            switch (fromBase)
+            {
+                case 16:
+                    return string.Join("", str.Select(DecodingHexDigitToBin));
+                case 10 when uint.TryParse(str, out uint temp):
+                    return Convert.ToString(temp, 2);
+                case 10:
+                    MyConsole.WriteLineYellow($"Warning:Unsigned number {str} is too large");
+                    return string.Empty;
+                default:
+                    MyConsole.WriteLineRed("Error to method ConvertStringNumberToBinary");
+                    return string.Empty;
+            }
+        }
+
+        private static string DecodingHexDigitToBin(char hex) =>
+            hex switch
+            {
+                '0' => "0000",
+                '1' => "0001",
+                '2' => "0010",
+                '3' => "0011",
+                '4' => "0100",
+                '5' => "0101",
+                '6' => "0110",
+                '7' => "0111",
+                '8' => "1000",
+                '9' => "1001",
+                'A' => "1010",
+                'B' => "1011",
+                'C' => "1100",
+                'D' => "1101",
+                'E' => "1110",
+                'F' => "1111",
+                _ => throw new ArgumentOutOfRangeException(nameof(hex), hex, null)
+            };
 
         public void ReceiveStart()
         {
@@ -355,7 +414,7 @@ namespace ConsoleComPort
                                 cnt = 0;
                             }
 
-                            MyConsole.Write($"{(char)value}");
+                            MyConsole.Write($"{(char) value}");
                             break;
                     }
 
