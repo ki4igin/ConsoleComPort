@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleComPort.AppTools;
@@ -55,13 +56,13 @@ namespace ConsoleComPort
             {
                 PortName = _settings.PortName,
                 BaudRate = _settings.BaudRate,
-                Parity = (Parity) Enum.Parse(typeof(Parity), _settings.Parity),
+                Parity = (Parity)Enum.Parse(typeof(Parity), _settings.Parity),
                 DataBits = _settings.DataBits,
-                StopBits = (StopBits) Enum.Parse(typeof(StopBits), _settings.StopBits),
-                Handshake = (Handshake) Enum.Parse(typeof(Handshake), _settings.Handshake),
+                StopBits = (StopBits)Enum.Parse(typeof(StopBits), _settings.StopBits),
+                Handshake = (Handshake)Enum.Parse(typeof(Handshake), _settings.Handshake),
                 ReadTimeout = 1000
             };
-            _formatRx = (Format) Enum.Parse(typeof(Format), _settings.Format);
+            _formatRx = (Format)Enum.Parse(typeof(Format), _settings.Format);
             _settings.Display();
         }
 
@@ -85,11 +86,11 @@ namespace ConsoleComPort
 
             _serialPort.PortName = settings.PortName;
             _serialPort.BaudRate = settings.BaudRate;
-            _serialPort.Parity = (Parity) Enum.Parse(typeof(Parity), settings.Parity);
+            _serialPort.Parity = (Parity)Enum.Parse(typeof(Parity), settings.Parity);
             _serialPort.DataBits = settings.DataBits;
-            _serialPort.StopBits = (StopBits) Enum.Parse(typeof(StopBits), settings.StopBits);
-            _serialPort.Handshake = (Handshake) Enum.Parse(typeof(Handshake), settings.Handshake);
-            _formatRx = (Format) Enum.Parse(typeof(Format), settings.Format);
+            _serialPort.StopBits = (StopBits)Enum.Parse(typeof(StopBits), settings.StopBits);
+            _serialPort.Handshake = (Handshake)Enum.Parse(typeof(Handshake), settings.Handshake);
+            _formatRx = (Format)Enum.Parse(typeof(Format), settings.Format);
             _settings.Display();
         }
 
@@ -198,58 +199,78 @@ namespace ConsoleComPort
                 return;
             }
 
-            byte[] sendBytes = default;
-            string consoleStr = default;
-            if (message.Length >= 2 && message[..2] == "0x")
+            byte[] sendBytes;
+            string consoleStr;
+            if (message.Length >= 2 && (message[..2] == "0x" || message[..2] == "0b" || message[..2] == "0d"))
             {
                 message = message
                     .Replace("_", "")
-                    .Replace("0x", "")
-                    .Replace(" ", "")
-                    .Replace("-", "")
-                    .ToUpper();
-                List<byte> listByte = new();
-                List<string> listStrings = new();
-                for (var i = 0; i < message.Length - 1; i += 2)
-                {
-                    var strByte = message[i..(i + 2)];
-                    if (byte.TryParse(strByte, NumberStyles.HexNumber, null, out byte value))
-                    {
-                        listByte.Add(value);
-                        listStrings.Add(strByte);
-                    }
-                    
-                }
-                sendBytes = listByte.ToArray();
-                consoleStr = string.Join(" ", listStrings.Select(str => $"0x{str}"));
-            }
-            else if (message.Length >= 10 && message[..2] == "0b")
-            {
-                message = message
-                    .Replace("_", "")
-                    .Replace("0b", "")
-                    .Replace(" ", "")
-                    .Replace("-", "")
-                    .ToUpper();
-                List<byte> listByte = new();
-                List<string> listStrings = new();
-                for (var i = 0; i < message.Length - 1; i += 8)
-                {
-                    var strByte = message[i..(i + 8)];
+                    .Replace("-", "");
+                string[] words = Regex.Split(message, @"(0x\S*)|(0b\S*)|(0d\S*)")
+                    .Where(s => s != string.Empty && s != " ")
+                    .ToArray();
 
-                    try
+                List<byte> listSendBytes = new();
+                List<string> listConsoleStrings = new();
+                foreach (string word in words)
+                {
+                    switch (word[..2])
                     {
-                        byte value = Convert.ToByte(strByte, 2);
-                        listByte.Add(value);
-                        listStrings.Add(strByte);
-                    }
-                    catch (FormatException e)
-                    {
-                        Console.WriteLine(e);
+                        case "0x":
+                        {
+                            string temp = word[2..].ToUpper();
+                            if (temp.Length % 2 != 0) temp = temp.Insert(0, "0");
+                            var strBytes = Enumerable
+                                .Range(0, temp.Length / 2)
+                                .Select(i => temp[(2 * i)..(2 * i + 2)])
+                                .ToArray();
+                            foreach (string strByte in strBytes)
+                            {
+                                if (byte.TryParse(strByte, NumberStyles.HexNumber, null, out byte value))
+                                {
+                                    listSendBytes.Add(value);
+                                    listConsoleStrings.Add("0x" + strByte);
+                                }
+                                else
+                                {
+                                    MyConsole.WriteLineRed($"Unknown format: {strByte}");
+                                }
+                            }
+
+                            break;
+                        }
+                        case "0b":
+                        {
+                            string temp = word[2..];
+                            if (temp.Length % 8 != 0) temp = temp.Insert(0, new string('0', (8 - temp.Length % 8)));
+                            var strBytes = Enumerable
+                                .Range(0, temp.Length / 8)
+                                .Select(i => temp[(8 * i)..(8 * i + 8)])
+                                .ToArray();
+                            foreach (string strByte in strBytes)
+                            {
+                                try
+                                {
+                                    byte value = Convert.ToByte(strByte, 2);
+                                    listSendBytes.Add(value);
+                                    listConsoleStrings.Add("0b" + strByte);
+                                }
+                                catch (FormatException)
+                                {
+                                    MyConsole.WriteLineRed($"Unknown format: {strByte}");
+                                }
+                            }
+
+                            break;
+                        }
+                        default:
+                            MyConsole.WriteLineRed($"Error string: {word}");
+                            break;
                     }
                 }
-                sendBytes = listByte.ToArray();
-                consoleStr = string.Join(" ", listStrings.Select(str => $"0b{str}"));
+
+                consoleStr = string.Join(" ", listConsoleStrings);
+                sendBytes = listSendBytes.ToArray();
             }
             else
             {
@@ -257,7 +278,7 @@ namespace ConsoleComPort
                 consoleStr = message;
             }
 
-            if (sendBytes is {Length: > 0})
+            if (sendBytes is { Length: > 0 })
             {
                 _serialPort.Write(sendBytes, 0, sendBytes.Length);
                 MyConsole.WriteNewLineYellow(consoleStr);
@@ -334,7 +355,7 @@ namespace ConsoleComPort
                                 cnt = 0;
                             }
 
-                            MyConsole.Write($"{(char) value}");
+                            MyConsole.Write($"{(char)value}");
                             break;
                     }
 
