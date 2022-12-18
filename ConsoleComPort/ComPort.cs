@@ -102,7 +102,7 @@ namespace ConsoleComPort
 
             foreach (var portName in portNames)
             {
-                SerialPort serialPort = new(portName);
+                SerialPort serialPort = new(portName, 115200);
                 try
                 {
                     serialPort.Open();
@@ -117,6 +117,12 @@ namespace ConsoleComPort
                     serialPort.Close();
                     continue;
                 }
+                catch (System.IO.IOException)
+                {
+                    serialPort.Close();
+                    continue;
+                }
+               
 
                 portNamesList.Add(portName);
                 serialPort.Close();
@@ -253,6 +259,31 @@ namespace ConsoleComPort
             ReceiveStart();
         }
 
+        private bool TryReopenPort(int nCount)
+        {
+            if (_serialPort.IsOpen)
+                return true;
+
+            for (int i = 0; i < nCount; i++)
+            {
+                Thread.Sleep(2000);
+                MyConsole.WriteNewLineYellow($"Try reopen port {_serialPort.PortName}, attempt {i+1}");
+                try
+                {
+                    _serialPort.Open();
+                }
+                catch (Exception e)
+                {
+                    MyConsole.WriteNewLineRed(e.Message);
+                    continue;
+                }
+                MyConsole.WriteNewLineGreen($"Port {_serialPort.PortName} open\n");
+                return true;
+            }
+            return false;
+
+        }
+
         private void ReceiveProcess()
         {
             int cnt = 0;
@@ -288,6 +319,12 @@ namespace ConsoleComPort
                 }
                 catch (TimeoutException)
                 {
+                }
+                catch (OperationCanceledException e)
+                {
+                    MyConsole.WriteLineRed(e.Message);
+                    if(TryReopenPort(3) is false)
+                        ReceiveStop();
                 }
                 catch (Exception e)
                 {
