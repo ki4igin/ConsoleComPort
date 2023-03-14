@@ -1,8 +1,7 @@
-﻿using AppTools;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using ConsoleComPort.AppTools;
+using static AutoCompleteConsole.AutoCompleteConsole;
 
 namespace ConsoleComPort
 {
@@ -22,20 +21,16 @@ namespace ConsoleComPort
                 ["start monitor"] = comPort.ReceiveStart,
                 ["stop monitor"] = comPort.ReceiveStop,
                 ["reboot"] = comPort.ReceiveReboot,
-                ["clear"] = Console.Clear,
                 ["settings"] = comPort.SetAllSettings,
-                ["quit program"] = null,
                 ["display settings"] = comPort.DisplaySettings,
                 ["save settings"] = comPort.SaveSetting,
-                ["save settings to file"] = comPort.SaveSettingToFile,
-                ["read settings from file"] = comPort.ReadSettingFromFile
             };
 
-            MyConsole.SetCmdDictionary(commands.Keys.ToArray());
+            Acc.AddKeyWords(commands.Keys.ToArray());
 
             while (true)
             {
-                string command = MyConsole.ReadLine();
+                string command = Acc.ReadLine();
                 string str = command;
                 command = command.ToLower();
                 if (commands.TryGetValue(command, out Action executeCmd))

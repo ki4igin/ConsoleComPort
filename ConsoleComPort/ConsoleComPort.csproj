@@ -8,6 +8,11 @@
   <ItemGroup>
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+    <PackageReference Include="YamlDotNet" Version="13.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AutoCompleteConsole\AutoCompleteConsole\AutoCompleteConsole.csproj" />
   </ItemGroup>
 
 </Project>
