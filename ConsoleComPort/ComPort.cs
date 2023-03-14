@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoCompleteConsole;
 using AutoCompleteConsole.StringProvider;
-using static AutoCompleteConsole.AutoCompleteConsole;
 using static ConsoleComPort.MessagePrinter;
 
 namespace ConsoleComPort

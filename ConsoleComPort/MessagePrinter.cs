@@ -1,5 +1,4 @@
 using AutoCompleteConsole;
-using static AutoCompleteConsole.AutoCompleteConsole;
 
 namespace ConsoleComPort;
 
