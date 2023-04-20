@@ -2,7 +2,7 @@ using AutoCompleteConsole;
 
 namespace ConsoleComPort;
 
-public static class MessagePrinter
+public static class Info
 {
     public static void PrintWarning(string str) =>
         Acc.WriteLine($"Warning: {str}", EscColor.ForegroundYellow);
