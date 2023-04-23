@@ -19,18 +19,7 @@ public class ComPort
         Ascii
     }
 
-    private readonly string[] _baudRatesList =
-    {
-        "4800",
-        "9600",
-        "19200",
-        "38400",
-        "57600",
-        "115200",
-        "128000",
-        "256000",
-        "Other"
-    };
+
 
 
     private Format _formatRx;
@@ -41,15 +30,15 @@ public class ComPort
     private static Selector _selector;
     private static Request _request;
 
-    public ComPort()
+    public ComPort(AppSettings appSettings)
     {
-        _appSettings = AppSettings.Read();
+        _appSettings = appSettings;
         _serialPort = new()
         {
             PortName = _appSettings.PortName,
             BaudRate = _appSettings.BaudRate,
-            Parity = (Parity) Enum.Parse(typeof(Parity), _appSettings.Parity),
-            StopBits = (StopBits) Enum.Parse(typeof(StopBits), _appSettings.StopBits),
+            Parity =  _appSettings.Parity,
+            StopBits = _appSettings.StopBits,
             ReadTimeout = 1000
         };
         _formatRx = (Format) Enum.Parse(typeof(Format), _appSettings.Format);
@@ -60,113 +49,8 @@ public class ComPort
             EscColor.BackgroundDarkMagenta));
     }
 
-    public void SetAllSettings()
-    {
-        if (_statusRx)
-        {
-            PrintError("First stop monitor");
-            return;
-        }
-
-        _appSettings.PortName = SetPortName(_appSettings.PortName);
-        _appSettings.BaudRate = SetBaudRate(_appSettings.BaudRate);
-        _appSettings.Parity = SetParity(_appSettings.Parity);
-        _appSettings.StopBits = SetStopBits(_appSettings.StopBits);
-        _appSettings.Format = SetFormat(_appSettings.Format);
-        _appSettings.BytesPerLine = SetBytesPerLine(_appSettings.BytesPerLine);
-
-        _serialPort.PortName = _appSettings.PortName;
-        _serialPort.BaudRate = _appSettings.BaudRate;
-        _serialPort.Parity = (Parity) Enum.Parse(typeof(Parity), _appSettings.Parity);
-        _serialPort.StopBits = (StopBits) Enum.Parse(typeof(StopBits), _appSettings.StopBits);
-        _formatRx = (Format) Enum.Parse(typeof(Format), _appSettings.Format);
-        DisplaySettings();
-    }
-
-    private static string SetPortName(string currentSettings)
-    {
-        var portNames = SerialPort.GetPortNames();
-        if (portNames.Length == 0)
-        {
-            return "None";
-        }
-
-        List<string> portNamesList = new();
-
-        foreach (var portName in portNames)
-        {
-            SerialPort serialPort = new(portName, 115200);
-            try
-            {
-                serialPort.Open();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                serialPort.Close();
-                continue;
-            }
-            catch (System.IO.FileNotFoundException)
-            {
-                serialPort.Close();
-                continue;
-            }
-            catch (System.IO.IOException)
-            {
-                serialPort.Close();
-                continue;
-            }
 
 
-            portNamesList.Add(portName);
-            serialPort.Close();
-        }
-
-        portNames = portNamesList.OrderBy(p => Convert.ToInt32(p.Remove(0, 3))).Distinct().ToArray();
-
-        var ind = portNames.ToList().IndexOf(currentSettings);
-        ind = ind >= 0 ? ind : 0;
-        return _selector.Run(new("Port", portNames), ind);
-    }
-
-    private int SetBaudRate(int currentSettings)
-    {
-        var ind = _baudRatesList.ToList().IndexOf(currentSettings.ToString());
-        ind = ind >= 0 ? ind : 0;
-        var baudRateStr = _selector.Run(new("BaudRate", _baudRatesList), ind);
-        var baudRate = int.Parse(_baudRatesList[ind]);
-        baudRate = baudRateStr == _baudRatesList.Last()
-            ? int.Parse(_request.ReadLine(
-                new("BaudRate", "Must be an integer"),
-                s => int.TryParse(s, out int _),
-                baudRate.ToString()))
-            : int.Parse(baudRateStr);
-
-        return baudRate;
-    }
-
-    private static string SetParity(string currentSettings) =>
-        _selector.Run(
-            new("Parity", Enum.GetNames(typeof(Parity))),
-            Enum.GetNames(typeof(Parity)).ToList().IndexOf(currentSettings));
-
-    private static string SetStopBits(string currentSettings) =>
-        _selector.Run(
-            new("StopBits", Enum.GetNames(typeof(StopBits))),
-            Enum.GetNames(typeof(StopBits)).ToList().IndexOf(currentSettings));
-
-    private static string SetFormat(string currentSettings) =>
-        _selector.Run(
-            new("Format", Enum.GetNames(typeof(Format))),
-            Enum.GetNames(typeof(Format)).ToList().IndexOf(currentSettings));
-
-    private static int SetBytesPerLine(int currentSettings) =>
-        int.Parse(_request.ReadLine(
-            new("BytesPerLine", "Must be an integer"),
-            s => int.TryParse(s, out int _),
-            currentSettings.ToString()));
-
-    public void SaveSetting() => AppSettings.Save(_appSettings);
-    public void ReadSetting() => _appSettings = AppSettings.Read();
 
 
     public void Transmit(string message)
@@ -317,6 +201,6 @@ public class ComPort
     public void DisplaySettings()
     {
         Acc.WriteLine("Current Settings:", EscColor.ForegroundGreen);
-        Acc.WriteLine(_appSettings.GetString());
+        Acc.WriteLine(_appSettings.ToString());
     }
 }

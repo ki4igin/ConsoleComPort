@@ -11,19 +11,25 @@ namespace ConsoleComPort
         {
             Console.WriteLine();
             
-            ComPort comPort = new();
+            AppSettings appSettings = AppSettings.Load();
+            ComPort comPort = new(appSettings);
 
             // Saving settings after exiting the program
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => comPort.SaveSetting();
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => AppSettings.Save(appSettings);
 
             Dictionary<string, Action> commands = new()
             {
                 ["start monitor"] = comPort.ReceiveStart,
                 ["stop monitor"] = comPort.ReceiveStop,
                 ["reboot"] = comPort.ReceiveReboot,
-                ["settings"] = comPort.SetAllSettings,
+                ["settings set all"] = appSettings.SetAllSettings,
+                ["settings set baudrate"] = appSettings.SetBaudRate,
+                ["settings set portname"] = appSettings.SetPortName,
+                ["settings set party"] = appSettings.SetParty,
+                ["settings set stopbits"] = appSettings.SetStopBits,
+                ["settings set bytes per line"] = appSettings.SetBytesPerLine,
                 ["display settings"] = comPort.DisplaySettings,
-                ["save settings"] = comPort.SaveSetting,
+                ["save settings"] = () => AppSettings.Save(appSettings),
             };
 
             Acc.AddKeyWords(commands.Keys.ToArray());
