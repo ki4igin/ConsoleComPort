@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCompleteConsole;
-using AutoCompleteConsole.StringProvider;
 using static ConsoleComPort.Info;
 
 namespace ConsoleComPort;
@@ -20,37 +19,41 @@ public class ComPort
     }
 
 
-
-
     private Format _formatRx;
     private bool _statusRx;
 
     private readonly SerialPort _serialPort;
     private AppSettings _appSettings;
-    private static Selector _selector;
-    private static Request _request;
+    private bool _closeRequest;
 
     public ComPort(AppSettings appSettings)
     {
         _appSettings = appSettings;
+        _appSettings.ChangedComPort += ChangedComPort;
         _serialPort = new()
         {
             PortName = _appSettings.PortName,
             BaudRate = _appSettings.BaudRate,
-            Parity =  _appSettings.Parity,
+            Parity = _appSettings.Parity,
             StopBits = _appSettings.StopBits,
             ReadTimeout = 1000
         };
         _formatRx = (Format) Enum.Parse(typeof(Format), _appSettings.Format);
         DisplaySettings();
-
-        _selector = Acc.CreateSelector(new(EscColor.ForegroundGreen, EscColor.BackgroundGreen));
-        _request = Acc.CreateRequest(new(EscColor.ForegroundGreen, EscColor.ForegroundRed,
-            EscColor.BackgroundDarkMagenta));
     }
 
-
-
+    private void ChangedComPort()
+    {
+        bool isWasOpen = _serialPort.IsOpen;
+        if (isWasOpen)
+            _serialPort.Close();
+        _serialPort.PortName = _appSettings.PortName;
+        _serialPort.BaudRate = _appSettings.BaudRate;
+        _serialPort.Parity = _appSettings.Parity;
+        _serialPort.StopBits = _appSettings.StopBits;
+        if (isWasOpen)
+            _serialPort.Open();
+    }
 
 
     public void Transmit(string message)
@@ -75,47 +78,36 @@ public class ComPort
         }
     }
 
-    public void ReceiveStart()
+    public void Open()
     {
-        if (_statusRx)
+        if (_serialPort.IsOpen)
+            return;
+
+        if (_serialPort.TryOpen() == false)
         {
+            PrintError($"Port {_serialPort.PortName} is busy");
             return;
         }
-
-        if (_serialPort.IsOpen == false)
-        {
-            try
-            {
-                _serialPort.Open();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                PrintError("Port is Busy");
-                return;
-            }
-        }
-
+        _serialPort.DiscardInBuffer();
         _serialPort.ReadTimeout = 1000;
-        Acc.WriteLine($"Start Monitor {_serialPort.PortName}", EscColor.ForegroundGreen);
-        _statusRx = true;
+        Acc.WriteLine($"Open port {_serialPort.PortName}", EscColor.ForegroundGreen);
         Task.Run(ReceiveProcess);
     }
 
-    public void ReceiveStop()
+    public void Close()
     {
-        _statusRx = false;
-        _serialPort.ReadTimeout = 100;
+        _closeRequest = true;
     }
 
-    public void ReceiveReboot()
+    public void ReOpen()
     {
-        ReceiveStop();
+        Close();
         while (_serialPort.IsOpen)
         {
         }
 
         Thread.Sleep(500);
-        ReceiveStart();
+        Open();
     }
 
     private bool TryReopenPort(int nCount)
@@ -136,7 +128,7 @@ public class ComPort
                 PrintError(e.Message);
                 continue;
             }
-                
+
             Acc.WriteLine($"Port {_serialPort.PortName} open", EscColor.ForegroundGreen);
 
             return true;
@@ -148,11 +140,12 @@ public class ComPort
     private void ReceiveProcess()
     {
         int cnt = 0;
-        _serialPort.DiscardInBuffer();
-        while (_statusRx)
+       
+        while (true)
         {
             try
             {
+                _serialPort.ReadTimeout = 10;
                 int value = _serialPort.ReadByte();
                 switch (_formatRx)
                 {
@@ -185,12 +178,12 @@ public class ComPort
             {
                 PrintError(e.Message);
                 if (TryReopenPort(3) is false)
-                    ReceiveStop();
+                    Close();
             }
             catch (Exception e)
             {
                 PrintError(e.Message);
-                ReceiveStop();
+                Close();
             }
         }
 

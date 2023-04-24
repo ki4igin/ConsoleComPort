@@ -40,6 +40,7 @@ public class AppSettings : IDescription
     [Description("Format Receive")] public string Format { get; set; } = "Ascii";
     [Description("Bytes per line")] public int BytesPerLine { get; private set; } = 500;
 
+    [YamlIgnore] internal Action? ChangedComPort { get; set; }
     [YamlIgnore] internal Action? Changed { get; set; }
 
     public AppSettings()
@@ -86,33 +87,34 @@ public class AppSettings : IDescription
     public void SetAllSettings()
     {
         int countChanges = 0;
+        int countComPortChanges = 0;
 
         string portName = GetNewPortName();
         if (PortName != portName)
         {
             PortName = portName;
-            countChanges++;
+            countComPortChanges++;
         }
 
         int baudRate = GetNewBaudRate();
         if (BaudRate != baudRate)
         {
             BaudRate = baudRate;
-            countChanges++;
+            countComPortChanges++;
         }
 
         Parity parity = GetNewParity();
         if (Parity != parity)
         {
             Parity = parity;
-            countChanges++;
+            countComPortChanges++;
         }
 
         StopBits stopBits = GetNewStopBits();
         if (StopBits != stopBits)
         {
             StopBits = stopBits;
-            countChanges++;
+            countComPortChanges++;
         }
 
         int bytesPerLine = GetNewBytesPerLine();
@@ -124,6 +126,8 @@ public class AppSettings : IDescription
 
         if (countChanges > 0)
             Changed?.Invoke();
+        if (countComPortChanges > 0)
+            ChangedComPort?.Invoke();
     }
 
     public void SetPortName()
@@ -132,7 +136,7 @@ public class AppSettings : IDescription
         if (PortName != portName)
         {
             PortName = portName;
-            Changed?.Invoke();
+            ChangedComPort?.Invoke();
         }
     }
 
@@ -142,7 +146,7 @@ public class AppSettings : IDescription
         if (BaudRate != baudRate)
         {
             BaudRate = baudRate;
-            Changed?.Invoke();
+            ChangedComPort?.Invoke();
         }
     }
 
@@ -152,7 +156,7 @@ public class AppSettings : IDescription
         if (Parity != parity)
         {
             Parity = parity;
-            Changed?.Invoke();
+            ChangedComPort?.Invoke();
         }
     }
 
@@ -162,7 +166,7 @@ public class AppSettings : IDescription
         if (StopBits != stopBits)
         {
             StopBits = stopBits;
-            Changed?.Invoke();
+            ChangedComPort?.Invoke();
         }
     }
 

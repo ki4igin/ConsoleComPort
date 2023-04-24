@@ -19,9 +19,9 @@ namespace ConsoleComPort
 
             Dictionary<string, Action> commands = new()
             {
-                ["start monitor"] = comPort.ReceiveStart,
-                ["stop monitor"] = comPort.ReceiveStop,
-                ["reboot"] = comPort.ReceiveReboot,
+                ["start monitor"] = comPort.Open,
+                ["stop monitor"] = comPort.Close,
+                ["reboot"] = comPort.ReOpen,
                 ["settings set all"] = appSettings.SetAllSettings,
                 ["settings set baudrate"] = appSettings.SetBaudRate,
                 ["settings set portname"] = appSettings.SetPortName,
