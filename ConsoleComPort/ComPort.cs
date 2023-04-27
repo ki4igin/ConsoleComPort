@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
@@ -11,19 +10,10 @@ namespace ConsoleComPort;
 
 public class ComPort
 {
-    private enum Format
-    {
-        Bin = 0,
-        Hex,
-        Ascii
-    }
-
-
-    private Format _formatRx;
-    private bool _statusRx;
+    private const int PacketSize = 0;
 
     private readonly SerialPort _serialPort;
-    private AppSettings _appSettings;
+    private readonly AppSettings _appSettings;
     private bool _closeRequest;
 
     public ComPort(AppSettings appSettings)
@@ -38,8 +28,8 @@ public class ComPort
             StopBits = _appSettings.StopBits,
             ReadTimeout = 1000
         };
-        _formatRx = (Format) Enum.Parse(typeof(Format), _appSettings.Format);
         DisplaySettings();
+        Task.Run(ReceiveProcess);
     }
 
     private void ChangedComPort()
@@ -58,7 +48,7 @@ public class ComPort
 
     public void Transmit(string message)
     {
-        if (_statusRx == false)
+        if (_serialPort.IsOpen == false)
         {
             return;
         }
@@ -66,7 +56,7 @@ public class ComPort
         Acc.WriteLine(message);
         byte[] sendBytes = MessageParser.ParseMessage(message);
 
-        if (sendBytes is {Length: > 0})
+        if (sendBytes.Length > 0)
         {
             _serialPort.Write(sendBytes, 0, sendBytes.Length);
             string consoleStr = string.Join(" ", sendBytes.Select(b => $"0x{b:X2}"));
@@ -88,10 +78,10 @@ public class ComPort
             PrintError($"Port {_serialPort.PortName} is busy");
             return;
         }
+
         _serialPort.DiscardInBuffer();
         _serialPort.ReadTimeout = 1000;
         Acc.WriteLine($"Open port {_serialPort.PortName}", EscColor.ForegroundGreen);
-        Task.Run(ReceiveProcess);
     }
 
     public void Close()
@@ -139,56 +129,75 @@ public class ComPort
 
     private void ReceiveProcess()
     {
-        int cnt = 0;
-       
         while (true)
         {
-            try
+            if (_serialPort.IsOpen)
             {
-                _serialPort.ReadTimeout = 10;
-                int value = _serialPort.ReadByte();
-                switch (_formatRx)
-                {
-                    case Format.Bin:
-                        Acc.Write($"0b{Convert.ToString(value, 2)} ");
-                        break;
-                    case Format.Hex:
-                        Acc.Write($"0x{value:X2} ");
-                        break;
-                    case Format.Ascii:
-                        if (value == '\n')
-                        {
-                            cnt = 0;
-                        }
+                Receive();
+            }
 
-                        Acc.Write($"{(char) value}");
-                        break;
-                }
+            if (_closeRequest)
+                _serialPort.Close();
 
-                if (++cnt >= _appSettings.BytesPerLine)
-                {
-                    Acc.WriteLine();
-                    cnt = 0;
-                }
-            }
-            catch (TimeoutException)
+            Task.Delay(100);
+        }
+        // ReSharper disable once FunctionNeverReturns
+    }
+
+    private void Receive()
+    {
+        if (_serialPort.BytesToRead < PacketSize)
+            return;
+
+        int rxCount = PacketSize switch
+        {
+            0 => _serialPort.BytesToRead,
+            _ => PacketSize
+        };
+
+        byte[] bytes = new byte[rxCount];
+        bool isSus = TryRead(bytes, rxCount);
+        
+        if (isSus is false)
+            return;
+
+        string str = ParseMessage(bytes);
+        Acc.Write(str);
+    }
+
+    private string ParseMessage(byte[] bytes)
+    {
+        return string.Join(" ", bytes.Select(b => $"0x{b:X2}"));
+    }
+
+    private bool TryRead(byte[] buffer, int count)
+    {
+        int rxCount = 0;
+        try
+        {
+            do
             {
-            }
-            catch (OperationCanceledException e)
-            {
-                PrintError(e.Message);
-                if (TryReopenPort(3) is false)
-                    Close();
-            }
-            catch (Exception e)
-            {
-                PrintError(e.Message);
+                rxCount += _serialPort.Read(buffer, rxCount, count - rxCount);
+            } while (rxCount != count);
+
+            return true;
+        }
+        catch (TimeoutException)
+        {
+        }
+        catch (OperationCanceledException e)
+        {
+            PrintError(e.Message);
+            if (TryReopenPort(3) is false)
                 Close();
-            }
+        }
+        catch (Exception e)
+        {
+            PrintError(e.Message);
+            Close();
         }
 
-        _serialPort.Close();
-        Acc.WriteLine($"Stop Monitor {_serialPort.PortName}", EscColor.ForegroundGreen);
+        return false;
     }
 
     public void DisplaySettings()
