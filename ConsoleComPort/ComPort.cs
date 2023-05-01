@@ -220,8 +220,7 @@ public class ComPort
 
     public void DisplaySettings()
     {
-        PrintInfo("Settings");
-        Acc.WriteLine(_appSettings.ToString());
+        PrintInfo("Settings\n"+ _appSettings.ToString());
     }
 
     private void UpdateStatusProcess()

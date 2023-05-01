@@ -62,7 +62,7 @@ public class AppSettings : IDescription
         }
         catch (Exception e)
         {
-            Info.PrintWarning(SettingsFile + " " + e);
+            Info.PrintWarning($"Can not load setting file {SettingsFile}");
             return new();
         }
     }
