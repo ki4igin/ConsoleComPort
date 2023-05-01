@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -37,16 +36,16 @@ public class AppSettings : IDescription
     [Description("BaudRate")] public int BaudRate { get; private set; } = 9600;
     [Description("Parity")] public Parity Parity { get; private set; } = Parity.None;
     [Description("StopBits")] public StopBits StopBits { get; private set; } = StopBits.One;
-    [Description("Format Receive")] public string Format { get; set; } = "Ascii";
-    [Description("Bytes per line")] public int BytesPerLine { get; private set; } = 500;
+    [Description("Format Receive")] public string Format { get; private set; } = "str";
 
     [YamlIgnore] internal Action? ChangedComPort { get; set; }
     [YamlIgnore] internal Action? Changed { get; set; }
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public AppSettings()
     {
-        _selector = Acc.CreateSelector(new(EscColor.ForegroundGreen, EscColor.BackgroundGreen));
-        _request = Acc.CreateRequest(new(EscColor.ForegroundGreen, EscColor.ForegroundRed,
+        _selector = Acc.CreateSelector(new(EscColor.ForegroundDarkGreen, EscColor.BackgroundDarkGreen));
+        _request = Acc.CreateRequest(new(EscColor.ForegroundDarkGreen, EscColor.ForegroundDarkRed,
             EscColor.BackgroundDarkMagenta));
     }
 
@@ -56,7 +55,10 @@ public class AppSettings : IDescription
         try
         {
             using StreamReader reader = new(SettingsFile);
-            return deserializer.Deserialize<AppSettings>(reader);
+            AppSettings settings = deserializer.Deserialize<AppSettings>(reader);
+            if (ReceiveMessageParser.ValidateFormat(settings.Format) != "")
+                settings.Format = "str";
+            return settings;
         }
         catch (Exception e)
         {
@@ -117,10 +119,10 @@ public class AppSettings : IDescription
             countComPortChanges++;
         }
 
-        int bytesPerLine = GetNewBytesPerLine();
-        if (BytesPerLine != bytesPerLine)
+        string format = GetNewFormat();
+        if (Format != format)
         {
-            BytesPerLine = bytesPerLine;
+            Format = format;
             countChanges++;
         }
 
@@ -170,16 +172,15 @@ public class AppSettings : IDescription
         }
     }
 
-    public void SetBytesPerLine()
+    public void SetFormat()
     {
-        int bytesPerLine = GetNewBytesPerLine();
-        if (BytesPerLine != bytesPerLine)
+        string format = GetNewFormat();
+        if (Format != format)
         {
-            BytesPerLine = bytesPerLine;
+            Format = format;
             Changed?.Invoke();
         }
     }
-
 
     private string GetNewPortName()
     {
@@ -212,15 +213,24 @@ public class AppSettings : IDescription
     private int GetNewBaudRate()
     {
         int ind = _baudRatesList.ToList().IndexOf(BaudRate.ToString());
-        ind = ind >= 0 ? ind : 0;
+        if (ind < 0)
+            ind = 0;
         string baudRateStr = _selector.Run(new("BaudRate", _baudRatesList), ind);
-        int baudRate = int.Parse(_baudRatesList[ind]);
-        return baudRateStr == _baudRatesList.Last()
-            ? int.Parse(_request.ReadLine(
-                new("BaudRate", "Must be an integer"),
-                s => int.TryParse(s, out int _),
-                baudRate.ToString()))
-            : int.Parse(baudRateStr);
+        return int.TryParse(baudRateStr, out int res) switch
+        {
+            true => res,
+            _ => int.Parse(
+                _request.ReadLine(
+                    new("BaudRate"),
+                    s => int.TryParse(s, out int _) switch
+                    {
+                        true => "",
+                        false => "BaudRate must be an integer"
+                    },
+                    BaudRate.ToString()
+                )
+            )
+        };
     }
 
     private Parity GetNewParity() =>
@@ -233,14 +243,9 @@ public class AppSettings : IDescription
             new("StopBits", Enum.GetNames(typeof(StopBits))[1..]),
             Enum.GetNames(typeof(StopBits))[1..].ToList().IndexOf(StopBits.GetDescription())));
 
-    // private void SetFormat() =>
-    //     Format = _selector.Run(
-    //         new("Format", Enum.GetNames(typeof(Format))),
-    //         Enum.GetNames(typeof(Format)).ToList().IndexOf(Format));
-
-    private int GetNewBytesPerLine() =>
-        int.Parse(_request.ReadLine(
-            new("BytesPerLine", "Must be an integer"),
-            s => int.TryParse(s, out int _),
-            BytesPerLine.ToString()));
+    private string GetNewFormat() =>
+        _request.ReadLine(
+            new("Format"),
+            ReceiveMessageParser.ValidateFormat,
+            Format);
 }
