@@ -60,7 +60,6 @@ public class ComPort
             _serialPort.Open();
     }
 
-
     public void Transmit(string message)
     {
         if (_serialPort.IsOpen == false)

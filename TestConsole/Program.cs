@@ -3,21 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace TestConsole
+namespace TestConsole;
+
+class Program
 {
-    class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Start Console App");
+        Console.WriteLine("Start Console App");
 
-            char[] s = new[] {(char)152, (char)38, (char)0, (char)0};
-            
-            string sendStr = new string(s);
+        char[] s = new[] {(char)152, (char)38, (char)0, (char)0};
+        
+        string sendStr = new(s);
 
-            byte[] bytes = Encoding.ASCII.GetBytes(sendStr);
-         
-            Console.ReadLine();
-        }
+        byte[] bytes = Encoding.ASCII.GetBytes(sendStr);
+     
+        Console.ReadLine();
     }
 }

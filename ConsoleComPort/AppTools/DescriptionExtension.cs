@@ -26,11 +26,7 @@ namespace AppTools
         public static string GetPropertyDescription<T>(this T value, string propertyName) where T : IDescription
         {
             var type = value.GetType();
-            var prop = type.GetProperty(propertyName);
-            if (prop is null)
-            {
-                throw new ArgumentException($"Property \"{propertyName}\" not found in {type}");
-            }
+            var prop = type.GetProperty(propertyName) ?? throw new ArgumentException($"Property \"{propertyName}\" not found in {type}");
             var atrib = prop.GetCustomAttribute(typeof(DescriptionAttribute)) as DescriptionAttribute;
             var str = atrib switch
             {
@@ -42,11 +38,7 @@ namespace AppTools
         public static string GetFieldDescription<T>(this T value, string fieldName) where T : IDescription
         {
             var type = value.GetType();
-            var field = type.GetField(fieldName);
-            if (field is null)
-            {
-                throw new ArgumentException($"Property \"{fieldName}\" not found in {type}");
-            }
+            var field = type.GetField(fieldName) ?? throw new ArgumentException($"Property \"{fieldName}\" not found in {type}");
             var atrib = field.GetCustomAttribute(typeof(DescriptionAttribute)) as DescriptionAttribute;
             var str = atrib switch
             {

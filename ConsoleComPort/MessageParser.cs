@@ -7,33 +7,33 @@ using static ConsoleComPort.Info;
 
 namespace ConsoleComPort;
 
-public static class MessageParser
+public static partial class MessageParser
 {
     public static byte[] ParseMessage(string message)
     {
         byte[] sendBytes;
         List<string> listSendBits = new();
-        message = Regex.Replace(message, @"[_,-]", "");
+        message = message.Replace("_", "").Replace("-", "");
 
-        if (Regex.IsMatch(message, @"^[0-9]{1,3}[x,b,d]"))
+        if (MessageRegex().IsMatch(message))
         {
             string[] words = message.Split(" ");
             foreach (string word in words)
             {
                 string bitValue = string.Empty;
-                if (Regex.IsMatch(word, @"^[0-9]{0,3}[x][0-F]*$", RegexOptions.IgnoreCase))
+                if (HexRegex().IsMatch(word))
                 {
                     bitValue = ConvertWordToBitString(word[0] == 'x' ? $"0{word}" : word, 'x');
                 }
-                else if (Regex.IsMatch(word, @"^[0-9]{0,3}[b][0,1]*$", RegexOptions.IgnoreCase))
+                else if (BinRegex().IsMatch(word))
                 {
                     bitValue = ConvertWordToBitString(word[0] == 'b' ? $"0{word}" : word, 'b');
                 }
-                else if (Regex.IsMatch(word, @"^[0-9]{0,3}[d][0-9]*$", RegexOptions.IgnoreCase))
+                else if (DecimalRegex().IsMatch(word))
                 {
                     bitValue = ConvertWordToBitString(word[0] == 'd' ? $"0{word}" : word, 'd');
                 }
-                else if (Regex.IsMatch(word, @"^[0-9]*$", RegexOptions.IgnoreCase))
+                else if (MyRegex().IsMatch(word))
                 {
                     bitValue = ConvertWordToBitString($"0d{word}", 'd');
                 }
@@ -142,4 +142,14 @@ public static class MessageParser
             'F' => "1111",
             _ => throw new ArgumentOutOfRangeException(nameof(hex), hex, null)
         };
+    [GeneratedRegex("^[0-9]{1,3}[x,b,d]")]
+    private static partial Regex MessageRegex();
+    [GeneratedRegex("^[0-9]{0,3}[x][0-F]*$", RegexOptions.IgnoreCase, "ru-RU")]
+    private static partial Regex HexRegex();
+    [GeneratedRegex("^[0-9]{0,3}[b][0,1]*$", RegexOptions.IgnoreCase, "ru-RU")]
+    private static partial Regex BinRegex();
+    [GeneratedRegex("^[0-9]{0,3}[d][0-9]*$", RegexOptions.IgnoreCase, "ru-RU")]
+    private static partial Regex DecimalRegex();
+    [GeneratedRegex("^[0-9]*$", RegexOptions.IgnoreCase, "ru-RU")]
+    private static partial Regex MyRegex();
 }
