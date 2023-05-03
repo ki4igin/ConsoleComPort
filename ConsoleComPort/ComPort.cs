@@ -1,349 +1,258 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCompleteConsole;
-using AutoCompleteConsole.StringProvider;
-using static ConsoleComPort.MessagePrinter;
+using static ConsoleComPort.Info;
 
-namespace ConsoleComPort
+namespace ConsoleComPort;
+
+public class ComPort
 {
-    public class ComPort
+    private readonly SerialPort _serialPort;
+    private readonly AppSettings _appSettings;
+    private readonly ReceiveMessageParser _receiveMessageParser;
+    private readonly Status _status;
+    private bool _closeRequest;
+
+    public ComPort(AppSettings appSettings, ReceiveMessageParser receiveMessageParser)
     {
-        private enum Format
+        _appSettings = appSettings;
+        _receiveMessageParser = receiveMessageParser;
+        _appSettings.ChangedComPort += ChangedComPort;
+        _appSettings.Changed += Changed;
+        _status = Acc.CreateStatus();
+        _serialPort = new()
         {
-            Bin = 0,
-            Hex,
-            Ascii
-        }
-
-        private readonly string[] _baudRatesList =
-        {
-            "4800",
-            "9600",
-            "19200",
-            "38400",
-            "57600",
-            "115200",
-            "128000",
-            "256000",
-            "Other"
+            PortName = _appSettings.PortName,
+            BaudRate = _appSettings.BaudRate,
+            Parity = _appSettings.Parity,
+            StopBits = _appSettings.StopBits,
+            ReadTimeout = 100
         };
+        DisplaySettings();
+        _status.Change(StatusStr);
+        Task.Run(ReceiveProcess);
+        Task.Run(UpdateStatusProcess);
+    }
 
-        private readonly string[] _dataBitsList =
+    private void Changed()
+    {
+        bool sus = _receiveMessageParser.ChangeFormat(_appSettings.Format);
+        if (sus is false)
         {
-            "5",
-            "6",
-            "7",
-            "8"
-        };
+            PrintWarning($"format \"{_appSettings.Format}\" is wrong");
+        }
+    }
 
-        private Format _formatRx;
-        private bool _statusRx;
+    private void ChangedComPort()
+    {
+        bool isWasOpen = _serialPort.IsOpen;
+        if (isWasOpen)
+            _serialPort.Close();
+        _serialPort.PortName = _appSettings.PortName;
+        _serialPort.BaudRate = _appSettings.BaudRate;
+        _serialPort.Parity = _appSettings.Parity;
+        _serialPort.StopBits = _appSettings.StopBits;
+        if (isWasOpen)
+            _serialPort.Open();
+    }
 
-        private readonly SerialPort _serialPort;
-        private AppSettings _appSettings;
-        private static Selector _selector;
-        private static Request _request;
-
-        public ComPort()
+    public void Transmit(string message)
+    {
+        if (_serialPort.IsOpen == false)
         {
-            _appSettings = AppSettings.Read();
-            _serialPort = new()
-            {
-                PortName = _appSettings.PortName,
-                BaudRate = _appSettings.BaudRate,
-                Parity = (Parity) Enum.Parse(typeof(Parity), _appSettings.Parity),
-                DataBits = _appSettings.DataBits,
-                StopBits = (StopBits) Enum.Parse(typeof(StopBits), _appSettings.StopBits),
-                Handshake = (Handshake) Enum.Parse(typeof(Handshake), _appSettings.Handshake),
-                ReadTimeout = 1000
-            };
-            _formatRx = (Format) Enum.Parse(typeof(Format), _appSettings.Format);
-            DisplaySettings();
-
-            _selector = Acc.CreateSelector(new(EscColor.ForegroundGreen, EscColor.BackgroundGreen));
-            _request = Acc.CreateRequest(new(EscColor.ForegroundGreen, EscColor.ForegroundRed,
-                EscColor.BackgroundDarkMagenta));
+            return;
         }
 
-        public void SetAllSettings()
+        Acc.WriteLine(message);
+        byte[] sendBytes = MessageParser.ParseMessage(message);
+
+        if (sendBytes.Length > 0)
         {
-            if (_statusRx)
-            {
-                PrintError("First stop monitor");
-                return;
-            }
+            _serialPort.Write(sendBytes, 0, sendBytes.Length);
+            string consoleStr = string.Join(" ", sendBytes.Select(b => $"0x{b:X2}"));
+            PrintSendMessage(consoleStr);
+        }
+        else
+        {
+            PrintError("Format send data not correct");
+        }
+    }
 
-            _appSettings.PortName = SetPortName(_appSettings.PortName);
-            _appSettings.BaudRate = SetBaudRate(_appSettings.BaudRate);
-            _appSettings.Parity = SetParity(_appSettings.Parity);
-            _appSettings.DataBits = SetDataBits(_appSettings.DataBits);
-            _appSettings.StopBits = SetStopBits(_appSettings.StopBits);
-            _appSettings.Handshake = SetHandshake(_appSettings.Handshake);
-            _appSettings.Format = SetFormat(_appSettings.Format);
-            _appSettings.BytesPerLine = SetBytesPerLine(_appSettings.BytesPerLine);
+    public void Open()
+    {
+        if (_serialPort.IsOpen)
+            return;
 
-            _serialPort.PortName = _appSettings.PortName;
-            _serialPort.BaudRate = _appSettings.BaudRate;
-            _serialPort.Parity = (Parity) Enum.Parse(typeof(Parity), _appSettings.Parity);
-            _serialPort.DataBits = _appSettings.DataBits;
-            _serialPort.StopBits = (StopBits) Enum.Parse(typeof(StopBits), _appSettings.StopBits);
-            _serialPort.Handshake = (Handshake) Enum.Parse(typeof(Handshake), _appSettings.Handshake);
-            _formatRx = (Format) Enum.Parse(typeof(Format), _appSettings.Format);
-            DisplaySettings();
+        if (_serialPort.TryOpen() == false)
+        {
+            PrintError($"Port {_serialPort.PortName} is busy");
+            return;
         }
 
-        private static string SetPortName(string currentSettings)
+        _serialPort.DiscardInBuffer();
+        _serialPort.ReadTimeout = 100;
+        PrintInfo($"Open port {_serialPort.PortName}");
+    }
+
+    public void Close()
+    {
+        _closeRequest = true;
+    }
+
+    public void ReOpen()
+    {
+        Close();
+        while (_serialPort.IsOpen)
         {
-            var portNames = SerialPort.GetPortNames();
-            if (portNames.Length == 0)
-            {
-                return "None";
-            }
-
-            List<string> portNamesList = new();
-
-            foreach (var portName in portNames)
-            {
-                SerialPort serialPort = new(portName, 115200);
-                try
-                {
-                    serialPort.Open();
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    serialPort.Close();
-                    continue;
-                }
-                catch (System.IO.FileNotFoundException)
-                {
-                    serialPort.Close();
-                    continue;
-                }
-                catch (System.IO.IOException)
-                {
-                    serialPort.Close();
-                    continue;
-                }
-
-
-                portNamesList.Add(portName);
-                serialPort.Close();
-            }
-
-            portNames = portNamesList.OrderBy(p => Convert.ToInt32(p.Remove(0, 3))).Distinct().ToArray();
-
-            var ind = portNames.ToList().IndexOf(currentSettings);
-            ind = ind >= 0 ? ind : 0;
-            return _selector.Run(new("Port", portNames), ind);
         }
 
-        private int SetBaudRate(int currentSettings)
-        {
-            var ind = _baudRatesList.ToList().IndexOf(currentSettings.ToString());
-            ind = ind >= 0 ? ind : 0;
-            var baudRateStr = _selector.Run(new("BaudRate", _baudRatesList), ind);
-            var baudRate = int.Parse(_baudRatesList[ind]);
-            baudRate = baudRateStr == _baudRatesList.Last()
-                ? int.Parse(_request.ReadLine(
-                    new("BaudRate", "Must be an integer"),
-                    s => int.TryParse(s, out int _),
-                    baudRate.ToString()))
-                : int.Parse(baudRateStr);
+        Thread.Sleep(500);
+        Open();
+    }
 
-            return baudRate;
+    private bool TryReopenPort(int nCount)
+    {
+        if (_serialPort.IsOpen)
+            return true;
+
+        for (int i = 0; i < nCount; i++)
+        {
+            Thread.Sleep(2000);
+            PrintWarning($"Try reopen port {_serialPort.PortName}, attempt {i + 1}");
+            try
+            {
+                _serialPort.Open();
+            }
+            catch (Exception e)
+            {
+                PrintError(e.Message);
+                continue;
+            }
+            
+            PrintInfo($"Port {_serialPort.PortName} open");
+
+            return true;
         }
 
-        private static string SetParity(string currentSettings) =>
-            _selector.Run(
-                new("Parity", Enum.GetNames(typeof(Parity))),
-                Enum.GetNames(typeof(Parity)).ToList().IndexOf(currentSettings));
+        return false;
+    }
 
-        private static string SetHandshake(string currentSettings) =>
-            _selector.Run(
-                new("Handshake", Enum.GetNames(typeof(Handshake))),
-                Enum.GetNames(typeof(Handshake)).ToList().IndexOf(currentSettings));
-
-        private int SetDataBits(int currentSettings)
-        {
-            var ind = _dataBitsList.ToList().IndexOf(currentSettings.ToString());
-            ind = ind >= 0 ? ind : 0;
-            var str = _selector.Run(new("BaudRate", _dataBitsList), ind);
-            return int.Parse(str);
-        }
-
-        private static string SetStopBits(string currentSettings) =>
-            _selector.Run(
-                new("StopBits", Enum.GetNames(typeof(StopBits))),
-                Enum.GetNames(typeof(StopBits)).ToList().IndexOf(currentSettings));
-
-        private static string SetFormat(string currentSettings) =>
-            _selector.Run(
-                new("Format", Enum.GetNames(typeof(Format))),
-                Enum.GetNames(typeof(Format)).ToList().IndexOf(currentSettings));
-
-        private static int SetBytesPerLine(int currentSettings) =>
-            int.Parse(_request.ReadLine(
-                new("BytesPerLine", "Must be an integer"),
-                s => int.TryParse(s, out int _),
-                currentSettings.ToString()));
-
-        public void SaveSetting() => AppSettings.Save(_appSettings);
-        public void ReadSetting() => _appSettings = AppSettings.Read();
-
-
-        public void Transmit(string message)
-        {
-            if (_statusRx == false)
-            {
-                return;
-            }
-
-            Acc.WriteLine(message);
-            byte[] sendBytes = MessageParser.ParseMessage(message);
-
-            if (sendBytes is {Length: > 0})
-            {
-                _serialPort.Write(sendBytes, 0, sendBytes.Length);
-                string consoleStr = string.Join(" ", sendBytes.Select(b => $"0x{b:X2}"));
-                Acc.WriteLine(consoleStr, EscColor.ForegroundYellow);
-            }
-            else
-            {
-                PrintError("Format send data not correct");
-            }
-        }
-
-        public void ReceiveStart()
-        {
-            if (_statusRx)
-            {
-                return;
-            }
-
-            if (_serialPort.IsOpen == false)
-            {
-                try
-                {
-                    _serialPort.Open();
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    PrintError("Port is Busy");
-                    return;
-                }
-            }
-
-            _serialPort.ReadTimeout = 1000;
-            Acc.WriteLine($"Start Monitor {_serialPort.PortName}", EscColor.ForegroundGreen);
-            _statusRx = true;
-            Task.Run(ReceiveProcess);
-        }
-
-        public void ReceiveStop()
-        {
-            _statusRx = false;
-            _serialPort.ReadTimeout = 100;
-        }
-
-        public void ReceiveReboot()
-        {
-            ReceiveStop();
-            while (_serialPort.IsOpen)
-            {
-            }
-
-            Thread.Sleep(500);
-            ReceiveStart();
-        }
-
-        private bool TryReopenPort(int nCount)
+    private void ReceiveProcess()
+    {
+        while (true)
         {
             if (_serialPort.IsOpen)
-                return true;
-
-            for (int i = 0; i < nCount; i++)
             {
-                Thread.Sleep(2000);
-                Acc.WriteLine($"Try reopen port {_serialPort.PortName}, attempt {i + 1}", EscColor.ForegroundYellow);
-                try
-                {
-                    _serialPort.Open();
-                }
-                catch (Exception e)
-                {
-                    PrintError(e.Message);
-                    continue;
-                }
-                
-                Acc.WriteLine($"Port {_serialPort.PortName} open", EscColor.ForegroundGreen);
-
-                return true;
+                Receive();
             }
 
-            return false;
-        }
-
-        private void ReceiveProcess()
-        {
-            int cnt = 0;
-            _serialPort.DiscardInBuffer();
-            while (_statusRx)
+            if (_closeRequest)
             {
-                try
-                {
-                    int value = _serialPort.ReadByte();
-                    switch (_formatRx)
-                    {
-                        case Format.Bin:
-                            Acc.Write($"0b{Convert.ToString(value, 2)} ");
-                            break;
-                        case Format.Hex:
-                            Acc.Write($"0x{value:X2} ");
-                            break;
-                        case Format.Ascii:
-                            if (value == '\n')
-                            {
-                                cnt = 0;
-                            }
-
-                            Acc.Write($"{(char) value}");
-                            break;
-                    }
-
-                    if (++cnt >= _appSettings.BytesPerLine)
-                    {
-                        Acc.WriteLine();
-                        cnt = 0;
-                    }
-                }
-                catch (TimeoutException)
-                {
-                }
-                catch (OperationCanceledException e)
-                {
-                    PrintError(e.Message);
-                    if (TryReopenPort(3) is false)
-                        ReceiveStop();
-                }
-                catch (Exception e)
-                {
-                    PrintError(e.Message);
-                    ReceiveStop();
-                }
+                _serialPort.Close();
+                _closeRequest = false;
+                PrintInfo($"Close port {_serialPort.PortName}");
             }
 
-            _serialPort.Close();
-            Acc.WriteLine($"Stop Monitor {_serialPort.PortName}", EscColor.ForegroundGreen);
+            Thread.Sleep(100);
+        }
+        // ReSharper disable once FunctionNeverReturns
+    }
+
+    private void Receive()
+    {
+        if (_serialPort.BytesToRead < Math.Max(_receiveMessageParser.BytesCount, 1))
+            return;
+
+        Debug.WriteLine($"Bytes to read {_serialPort.BytesToRead}");
+
+        int rxCount = _receiveMessageParser.BytesCount switch
+        {
+            0 => _serialPort.BytesToRead,
+            _ => _receiveMessageParser.BytesCount
+        };
+
+        while (_serialPort.BytesToRead >= rxCount)
+        {
+            byte[] bytes = new byte[rxCount];
+            bool isSus = TryRead(bytes, rxCount);
+
+            if (isSus is false)
+                return;
+
+            string str = _receiveMessageParser.Parse(bytes);
+            Acc.Write(str);
+        }
+    }
+
+    private bool TryRead(byte[] buffer, int count)
+    {
+        int rxCount = 0;
+        try
+        {
+            do
+            {
+                rxCount += _serialPort.Read(buffer, rxCount, count - rxCount);
+            } while (rxCount != count);
+
+            return true;
+        }
+        catch (TimeoutException)
+        {
+        }
+        catch (OperationCanceledException e)
+        {
+            PrintError(e.Message);
+            if (TryReopenPort(3) is false)
+                Close();
+        }
+        catch (Exception e)
+        {
+            PrintError(e.Message);
+            Close();
         }
 
-        public void DisplaySettings()
+        return false;
+    }
+
+    public void DisplaySettings()
+    {
+        PrintInfo("Settings\n"+ _appSettings.ToString());
+    }
+
+    private void UpdateStatusProcess()
+    {
+        (string Port, int BaudRate, string Format, bool isOpen) comStatusOld =
+            (_serialPort.PortName, _serialPort.BaudRate, _appSettings.Format, _serialPort.IsOpen);
+
+        while (true)
         {
-            Acc.WriteLine("Current Settings:", EscColor.ForegroundGreen);
-            Acc.WriteLine(_appSettings.GetString());
+            (string Port, int BaudRate, string Format, bool isOpen) comStatusCurrent =
+                (_serialPort.PortName, _serialPort.BaudRate, _appSettings.Format, _serialPort.IsOpen);
+            if (comStatusOld != comStatusCurrent)
+            {
+                _status.Change(StatusStr);
+                comStatusOld = comStatusCurrent;
+            }
+
+            Thread.Sleep(100);
+        }
+        // ReSharper disable once FunctionNeverReturns
+    }
+
+    private string StatusStr
+    {
+        get
+        {
+            string portNameStr = _serialPort.IsOpen switch
+            {
+                true => _serialPort.PortName.Color(EscColor.ForegroundDarkGreen),
+                false => _serialPort.PortName.Color(EscColor.ForegroundDarkRed),
+            };
+            return $"Port: {portNameStr}   Baudrate: {_serialPort.BaudRate}   Format: {_appSettings.Format}";
         }
     }
 }
